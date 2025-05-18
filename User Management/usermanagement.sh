@@ -2,9 +2,9 @@
 # =============================================
 # Author: Gerry Racine
 # Created: 2025-05-18
-# Version: 1.1
+# Version: 1.2
 # Description: Interaktives Benutzermanagement-Skript zur Anlage, Löschung,
-#              Umbenennung und Auflistung von Benutzern.
+#              Umbenennung und Auflistung von Benutzern. Erstellt bei Bedarf das Home-Verzeichnis.
 # =============================================
 
 # Funktion zur Anzeige des Menüs
@@ -33,6 +33,13 @@ add_user() {
     useradd -m -s /bin/bash -G wheel "$username"
   else
     useradd -m -s /bin/bash "$username"
+  fi
+
+  # Home-Verzeichnis anlegen, falls nicht automatisch erstellt
+  home_dir="/home/$username"
+  if [[ ! -d "$home_dir" ]]; then
+    mkdir -p "$home_dir"
+    chown "$username":"$username" "$home_dir"
   fi
 
   # Passwort setzen
@@ -126,4 +133,3 @@ while true; do
   esac
 done
 # Ende des Skripts
-# =============================================
