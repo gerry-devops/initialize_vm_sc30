@@ -2,9 +2,9 @@
 # =============================================
 # Author: Gerry Racine
 # Created: 2025-05-18
-# Version: 1.0
-# Description: Interaktives Benutzermanagement-Skript zur Anlage, Löschung
-#              und Umbenennung von Benutzern.
+# Version: 1.1
+# Description: Interaktives Benutzermanagement-Skript zur Anlage, Löschung,
+#              Umbenennung und Auflistung von Benutzern.
 # =============================================
 
 # Funktion zur Anzeige des Menüs
@@ -14,8 +14,9 @@ show_menu() {
   echo "1) Neuen Benutzer anlegen"
   echo "2) Bestehenden Benutzer löschen"
   echo "3) Benutzername ändern"
-  echo "4) Beenden"
-  echo -n "Bitte Option wählen [1-4]: "
+  echo "4) Alle Benutzer auflisten"
+  echo "5) Beenden"
+  echo -n "Bitte Option wählen [1-5]: "
 }
 
 # Funktion: Neuen Benutzer anlegen
@@ -55,12 +56,11 @@ delete_user() {
   echo "Verfügbare Benutzer:"
   select u in "${users[@]}" "Abbrechen"; do
     if [[ $REPLY -gt 0 && $REPLY -le ${#users[@]} ]]; then
-      target_user=$u
-      break
+      target_user=$u; break
     elif [[ $REPLY -eq $(( ${#users[@]} + 1 )) ]]; then
       echo "Abbruch."; return
     else
-      echo "Ungültige Auswahl.";
+      echo "Ungültige Auswahl."
     fi
   done
 
@@ -79,6 +79,7 @@ delete_user() {
 
 # Funktion: Benutzername ändern
 rename_user() {
+  # Liste der Benutzer mit UID >= 1000
   mapfile -t users < <(getent passwd | awk -F: '$3 >= 1000 && $1 != "nobody" {print $1}')
   if [[ ${#users[@]} -eq 0 ]]; then
     echo "Keine normalen Benutzer zum Umbenennen gefunden."
@@ -88,12 +89,11 @@ rename_user() {
   echo "Verfügbare Benutzer:"
   select u in "${users[@]}" "Abbrechen"; do
     if [[ $REPLY -gt 0 && $REPLY -le ${#users[@]} ]]; then
-      old_name=$u
-      break
+      old_name=$u; break
     elif [[ $REPLY -eq $(( ${#users[@]} + 1 )) ]]; then
       echo "Abbruch."; return
     else
-      echo "Ungültige Auswahl.";
+      echo "Ungültige Auswahl."
     fi
   done
 
@@ -106,6 +106,12 @@ rename_user() {
   fi
 }
 
+# Funktion: Alle Benutzer auflisten
+list_users() {
+  echo "Aktuelle Benutzer (UID >= 1000):"
+  getent passwd | awk -F: '$3 >= 1000 && $1 != "nobody" {printf "%-20s Home: %s\n", $1, $6}'
+}
+
 # Hauptprogramm mit Menü
 while true; do
   show_menu
@@ -114,9 +120,10 @@ while true; do
     1) add_user ;;
     2) delete_user ;;
     3) rename_user ;;
-    4) echo "Beende Skript."; exit 0 ;;
+    4) list_users ;;
+    5) echo "Beende Skript."; exit 0 ;;
     *) echo "Ungültige Option." ;;
   esac
 done
 # Ende des Skripts
-# Hinweis: Dieses Skript muss mit Root-Rechten ausgeführt werden.
+# =============================================
