@@ -4,7 +4,7 @@
 #              Es prüft das Vorhandensein der Disk, erstellt eine Partition, Physical Volume,
 #              Volume Group und Logical Volume, formatiert das LV mit XFS, richtet einen Mountpoint ein,
 #              aktualisiert /etc/fstab und mountet das Dateisystem optional.
-# Author: Max Mustermann
+# Author: Gerry Racine
 # Datum: 2025-05-18
 # Version 1.0
 
