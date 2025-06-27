@@ -29,6 +29,7 @@ export no_proxy="localhost,127.0.0.1,.sccloudinfra.net"
 EOF
 
 chmod 644 "$PROXY_CONF"
+# shellcheck source=/etc/profile.d/proxy.sh
 # Proxy aktivieren
 source "$PROXY_CONF"
 echo "Proxy-Konfiguration unter $PROXY_CONF angelegt und aktiviert."
