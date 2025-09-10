@@ -23,9 +23,13 @@ PROXY_CONF="/etc/profile.d/proxy.sh"
 cat > "$PROXY_CONF" << 'EOF'
 # Systemweite Proxy-Einstellungen
 export http_proxy="193.222.84.93:8080"
+export HTTP_PROXY="193.222.84.93:8080"
 export https_proxy="193.222.84.93:8080"
+export HTTPS_PROXY="193.222.84.93:8080"
 export ftp_proxy="193.222.84.93:8080"
-export no_proxy="localhost,127.0.0.1,.sccloudinfra.net"
+export FTP_PROXY="193.222.84.93:8080"
+export no_proxy="127.0.0.1, localhost, *.draco-449.sccloudres.net, *.mgmt-emm.local, *.sccloudinfra.net, private.cloud.swisscom.com, *.private.cloud.swisscom.com, ds12s3.swisscom.com, *.sharedit.ch, 194.11.96.*"
+export NO_PROXY="127.0.0.1, localhost, *.draco-449.sccloudres.net, *.mgmt-emm.local, *.sccloudinfra.net, private.cloud.swisscom.com, *.private.cloud.swisscom.com, ds12s3.swisscom.com, *.sharedit.ch, 194.11.96.*"
 EOF
 
 chmod 644 "$PROXY_CONF"
