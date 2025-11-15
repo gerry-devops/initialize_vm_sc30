@@ -2,7 +2,7 @@
 - name: RHEL9 System-Update (mit Sonderregeln)
   hosts: rhel9_servers
   become: yes
-  gather_facts: no # Wir brauchen Fakten nur, wenn wir sie explizit laden
+  gather_facts: no
 
   tasks:
     # -----------------------------------------------------------------
@@ -11,26 +11,26 @@
     - name: "BLOCK: Update-Pfad fuer {{ ansible_host }} (mit Neustart)"
       ansible.builtin.block:
 
-        - name: A.1: (SONDERREGEL) Führe volles System-Update durch (inkl. Kernel)
+        - name: "A.1: (SONDERREGEL) Führe volles System-Update durch (inkl. Kernel)"  # KORRIGIERT
           ansible.builtin.dnf:
             name: '*'
             state: latest
           register: dnf_update_special
 
-        - name: A.2: (SONDERREGEL) Zeige durchgeführte Updates an
+        - name: "A.2: (SONDERREGEL) Zeige durchgeführte Updates an"  # KORRIGIERT
           ansible.builtin.debug:
             msg: "Update auf {{ ansible_host }} war erfolgreich. Geänderte Pakete: {{ dnf_update_special.msg }}"
           when: dnf_update_special.changed
 
-        - name: A.3: (SONDERREGEL) Führe Neustart durch
+        - name: "A.3: (SONDERREGEL) Führe Neustart durch"  # KORRIGIERT
           ansible.builtin.reboot:
             msg: "Neustart nach System-Update"
             connect_timeout: 10
-            reboot_timeout: 600       # 10 Minuten Wartezeit für den Neustart
-            pre_reboot_delay: 5       # 5 Sekunden warten vor dem Reboot
-            post_reboot_delay: 30     # 30 Sekunden warten nach dem Reboot
-            test_command: whoami      # Testet, ob der Server wieder erreichbar ist
-          when: dnf_update_special.changed # Nur neustarten, wenn Updates erfolgt sind
+            reboot_timeout: 600
+            pre_reboot_delay: 5
+            post_reboot_delay: 30
+            test_command: whoami
+          when: dnf_update_special.changed
 
       # Diese when-Bedingung steuert den gesamten oberen Block
       when: ansible_host == "10.186.52.5"
