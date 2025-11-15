@@ -1,0 +1,44 @@
+---
+- name: RHEL9 System-Update ohne Neustart
+  hosts: rhel9_servers         # Zielt auf die Gruppe in Ihrer inventory.ini
+  become: yes                  # Führt Aufgaben als root (per sudo) aus
+  gather_facts: no             # Wir brauchen die Fakten hier nicht sofort
+
+  tasks:
+    - name: 1. Stelle sicher, dass yum-utils (für needs-restarting) installiert ist
+      ansible.builtin.dnf:
+        name: yum-utils
+        state: present
+
+    - name: 2. Prüfe, ob bereits ein Neustart erforderlich ist
+      ansible.builtin.command: needs-restarting -r
+      register: reboot_check
+      changed_when: false       # Dieser Befehl ändert nichts
+      failed_when: false        # Wir fangen den Fehlercode manuell ab
+
+    - name: 3. Breche ab, wenn ein Neustart bereits ansteht
+      ansible.builtin.fail:
+        msg: "ABBRUCH: Der Server {{ ansible_host }} muss bereits neu gestartet werden. Bitte manuell prüfen."
+      when: reboot_check.rc != 0
+
+    - name: 4. Suche nach verfügbaren Kernel-Updates
+      ansible.builtin.dnf:
+        list: updates
+      register: available_updates
+
+    - name: 5. Breche ab, wenn Kernel-Updates gefunden wurden (würde Neustart erfordern)
+      ansible.builtin.fail:
+        msg: "ABBRUCH: Es stehen Kernel-Updates an ({{ (available_updates.packages | dict2items | selectattr('key', 'match', '^kernel(\\..*)?$') | map(attribute='key') | list) | join(', ') }}). Ein Neustart wäre nach dem Update erforderlich."
+      when: "available_updates.packages | dict2items | selectattr('key', 'match', '^kernel(\\..*)?$') | list | length > 0"
+
+    - name: 6. Führe das System-Update durch (alle Pakete)
+      ansible.builtin.dnf:
+        name: '*'
+        state: latest
+        security: no # Stellt sicher, dass auch nicht-security updates installiert werden
+      register: dnf_update
+
+    - name: 7. Zeige die durchgeführten Updates an
+      ansible.builtin.debug:
+        msg: "Update erfolgreich. Geänderte Pakete: {{ dnf_update.msg }}"
+      when: dnf_update.changed
