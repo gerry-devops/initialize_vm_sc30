@@ -1,44 +1,83 @@
 ---
-- name: RHEL9 System-Update ohne Neustart
-  hosts: rhel9_servers         # Zielt auf die Gruppe in Ihrer inventory.ini
-  become: yes                  # Führt Aufgaben als root (per sudo) aus
-  gather_facts: no             # Wir brauchen die Fakten hier nicht sofort
+- name: RHEL9 System-Update (mit Sonderregeln)
+  hosts: rhel9_servers
+  become: yes
+  gather_facts: no # Wir brauchen Fakten nur, wenn wir sie explizit laden
 
   tasks:
-    - name: 1. Stelle sicher, dass yum-utils (für needs-restarting) installiert ist
-      ansible.builtin.dnf:
-        name: yum-utils
-        state: present
+    # -----------------------------------------------------------------
+    # PFAD A: Sonderregel für 10.186.52.5 (Update + Neustart)
+    # -----------------------------------------------------------------
+    - name: "BLOCK: Update-Pfad fuer {{ ansible_host }} (mit Neustart)"
+      ansible.builtin.block:
 
-    - name: 2. Prüfe, ob bereits ein Neustart erforderlich ist
-      ansible.builtin.command: needs-restarting -r
-      register: reboot_check
-      changed_when: false       # Dieser Befehl ändert nichts
-      failed_when: false        # Wir fangen den Fehlercode manuell ab
+        - name: A.1: (SONDERREGEL) Führe volles System-Update durch (inkl. Kernel)
+          ansible.builtin.dnf:
+            name: '*'
+            state: latest
+          register: dnf_update_special
 
-    - name: 3. Breche ab, wenn ein Neustart bereits ansteht
-      ansible.builtin.fail:
-        msg: "ABBRUCH: Der Server {{ ansible_host }} muss bereits neu gestartet werden. Bitte manuell prüfen."
-      when: reboot_check.rc != 0
+        - name: A.2: (SONDERREGEL) Zeige durchgeführte Updates an
+          ansible.builtin.debug:
+            msg: "Update auf {{ ansible_host }} war erfolgreich. Geänderte Pakete: {{ dnf_update_special.msg }}"
+          when: dnf_update_special.changed
 
-    - name: 4. Suche nach verfügbaren Kernel-Updates
-      ansible.builtin.dnf:
-        list: updates
-      register: available_updates
+        - name: A.3: (SONDERREGEL) Führe Neustart durch
+          ansible.builtin.reboot:
+            msg: "Neustart nach System-Update"
+            connect_timeout: 10
+            reboot_timeout: 600       # 10 Minuten Wartezeit für den Neustart
+            pre_reboot_delay: 5       # 5 Sekunden warten vor dem Reboot
+            post_reboot_delay: 30     # 30 Sekunden warten nach dem Reboot
+            test_command: whoami      # Testet, ob der Server wieder erreichbar ist
+          when: dnf_update_special.changed # Nur neustarten, wenn Updates erfolgt sind
 
-    - name: 5. Breche ab, wenn Kernel-Updates gefunden wurden (würde Neustart erfordern)
-      ansible.builtin.fail:
-        msg: "ABBRUCH: Es stehen Kernel-Updates an ({{ (available_updates.packages | dict2items | selectattr('key', 'match', '^kernel(\\..*)?$') | map(attribute='key') | list) | join(', ') }}). Ein Neustart wäre nach dem Update erforderlich."
-      when: "available_updates.packages | dict2items | selectattr('key', 'match', '^kernel(\\..*)?$') | list | length > 0"
+      # Diese when-Bedingung steuert den gesamten oberen Block
+      when: ansible_host == "10.186.52.5"
 
-    - name: 6. Führe das System-Update durch (alle Pakete)
-      ansible.builtin.dnf:
-        name: '*'
-        state: latest
-        security: no # Stellt sicher, dass auch nicht-security updates installiert werden
-      register: dnf_update
+    # -----------------------------------------------------------------
+    # PFAD B: Standard-Pfad für alle ANDEREN Hosts (Kein Neustart)
+    # -----------------------------------------------------------------
+    - name: "BLOCK: Update-Pfad fuer {{ ansible_host }} (ohne Neustart)"
+      ansible.builtin.block:
 
-    - name: 7. Zeige die durchgeführten Updates an
-      ansible.builtin.debug:
-        msg: "Update erfolgreich. Geänderte Pakete: {{ dnf_update.msg }}"
-      when: dnf_update.changed
+        - name: B.1. Stelle sicher, dass yum-utils (für needs-restarting) installiert ist
+          ansible.builtin.dnf:
+            name: yum-utils
+            state: present
+
+        - name: B.2. Prüfe, ob bereits ein Neustart erforderlich ist
+          ansible.builtin.command: needs-restarting -r
+          register: reboot_check
+          changed_when: false
+          failed_when: false
+
+        - name: B.3. Breche ab, wenn ein Neustart bereits ansteht
+          ansible.builtin.fail:
+            msg: "ABBRUCH: Der Server {{ ansible_host }} muss bereits neu gestartet werden. Bitte manuell prüfen."
+          when: reboot_check.rc != 0
+
+        - name: B.4. Suche nach verfügbaren Kernel-Updates
+          ansible.builtin.dnf:
+            list: updates
+          register: available_updates
+
+        - name: B.5. Breche ab, wenn Kernel-Updates gefunden wurden (würde Neustart erfordern)
+          ansible.builtin.fail:
+            msg: "ABBRUCH: Es stehen Kernel-Updates an ({{ (available_updates.packages | dict2items | selectattr('key', 'match', '^kernel(\\..*)?$') | map(attribute='key') | list) | join(', ') }}). Ein Neustart wäre nach dem Update erforderlich."
+          when: "available_updates.packages | dict2items | selectattr('key', 'match', '^kernel(\\..*)?$') | list | length > 0"
+
+        - name: B.6. Führe das System-Update durch (alle Pakete)
+          ansible.builtin.dnf:
+            name: '*'
+            state: latest
+            security: no
+          register: dnf_update_safe
+
+        - name: B.7. Zeige die durchgeführten Updates an
+          ansible.builtin.debug:
+            msg: "Update erfolgreich. Geänderte Pakete: {{ dnf_update_safe.msg }}"
+          when: dnf_update_safe.changed
+
+      # Diese when-Bedingung steuert den gesamten unteren Block
+      when: ansible_host != "10.186.52.5"
