@@ -1,0 +1,17 @@
+{
+	"folders": [
+		{
+			"name": "initialize_vm_sc30",
+			"path": "initialize_vm_sc30"
+		},
+		{
+			"name": "setup_lvm_sc30",
+			"path": "setup_lvm_sc30"
+		},
+		{
+			"name": "User Management",
+			"path": "User Management"
+		}
+	],
+	"settings": {}
+}
