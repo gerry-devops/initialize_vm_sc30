@@ -9,20 +9,20 @@
     # PFAD A: Sonderregel für 10.186.52.5 (Update + Neustart)
     # -----------------------------------------------------------------
     - name: "BLOCK: Update-Pfad fuer {{ ansible_host }} (mit Neustart)"
-      ansible.builtin.block:
+      block:  # <-- KORREKTUR (war 'ansible.builtin.block:')
 
-        - name: "A.1: (SONDERREGEL) Führe volles System-Update durch (inkl. Kernel)"  # KORRIGIERT
+        - name: "A.1: (SONDERREGEL) Führe volles System-Update durch (inkl. Kernel)"
           ansible.builtin.dnf:
             name: '*'
             state: latest
           register: dnf_update_special
 
-        - name: "A.2: (SONDERREGEL) Zeige durchgeführte Updates an"  # KORRIGIERT
+        - name: "A.2: (SONDERREGEL) Zeige durchgeführte Updates an"
           ansible.builtin.debug:
             msg: "Update auf {{ ansible_host }} war erfolgreich. Geänderte Pakete: {{ dnf_update_special.msg }}"
           when: dnf_update_special.changed
 
-        - name: "A.3: (SONDERREGEL) Führe Neustart durch"  # KORRIGIERT
+        - name: "A.3: (SONDERREGEL) Führe Neustart durch"
           ansible.builtin.reboot:
             msg: "Neustart nach System-Update"
             connect_timeout: 10
@@ -39,7 +39,7 @@
     # PFAD B: Standard-Pfad für alle ANDEREN Hosts (Kein Neustart)
     # -----------------------------------------------------------------
     - name: "BLOCK: Update-Pfad fuer {{ ansible_host }} (ohne Neustart)"
-      ansible.builtin.block:
+      block:  # <-- KORREKTUR (war 'ansible.builtin.block:')
 
         - name: B.1. Stelle sicher, dass yum-utils (für needs-restarting) installiert ist
           ansible.builtin.dnf:
