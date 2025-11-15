@@ -11,6 +11,9 @@
 		{
 			"name": "User Management",
 			"path": "User Management"
+		},
+		{
+			"path": "Ansible"
 		}
 	],
 	"settings": {}
