@@ -19,7 +19,7 @@ fi
 
 # 1) Systemweiten Proxy einrichten
 PROXY_CONF="/etc/profile.d/proxy.sh"
-
+setup_lvm
 cat > "$PROXY_CONF" << 'EOF'
 # Systemweite Proxy-Einstellungen
 export http_proxy="193.222.84.93:8080"
@@ -28,8 +28,8 @@ export https_proxy="193.222.84.93:8080"
 export HTTPS_PROXY="193.222.84.93:8080"
 export ftp_proxy="193.222.84.93:8080"
 export FTP_PROXY="193.222.84.93:8080"
-export no_proxy="127.0.0.1, localhost, *.draco-449.sccloudres.net, *.mgmt-emm.local, *.sccloudinfra.net, private.cloud.swisscom.com, *.private.cloud.swisscom.com, ds12s3.swisscom.com, *.sharedit.ch, 194.11.96.*"
-export NO_PROXY="127.0.0.1, localhost, *.draco-449.sccloudres.net, *.mgmt-emm.local, *.sccloudinfra.net, private.cloud.swisscom.com, *.private.cloud.swisscom.com, ds12s3.swisscom.com, *.sharedit.ch, 194.11.96.*"
+export no_proxy="127.0.0.1, localhost, *.draco-449.sccloudres.net, *.mgmt-emm.local, *.sccloudinfra.net, private.cloud.swisscom.com, *.private.cloud.swisscom.com, ds12s3.swisscom.com, *.sharedit.ch, 194.11.96.*, pcms2capsule-5.prd.cms.sccloudinfra.net"
+export NO_PROXY="127.0.0.1, localhost, *.draco-449.sccloudres.net, *.mgmt-emm.local, *.sccloudinfra.net, private.cloud.swisscom.com, *.private.cloud.swisscom.com, ds12s3.swisscom.com, *.sharedit.ch, 194.11.96.*, pcms2capsule-5.prd.cms.sccloudinfra.net"
 EOF
 
 chmod 644 "$PROXY_CONF"
@@ -56,23 +56,31 @@ echo "Einträge in $RESOLV geprüft und ggf. ergänzt."
 read -p "Soll das System jetzt registriert und Repos eingebunden werden? (j/n) " ANTWORT
 case "$ANTWORT" in
   [Jj]*)
-    # 3.1) Aktuellen FQDN holen
-    HOST="$(hostname -f)"
-    # 3.2) Trailing-Komma entfernen, falls vorhanden
-    if [[ "${HOST: -1}" == "," ]]; then
-      CLEAN_HOST="${HOST%,}"
-      echo "Hostname endet auf ',', setze bereinigten Hostname auf $CLEAN_HOST"
-      hostnamectl set-hostname "$CLEAN_HOST"
-      HOST="$CLEAN_HOST"
-    fi
-    # 3.3) Alles in Kleinbuchstaben wandeln
-    LOWER="$(echo "$HOST" | tr '[:upper:]' '[:lower:]')"
-    if [[ "$HOST" != "$LOWER" ]]; then
-      echo "Hostname enthält Großbuchstaben oder ungültige Zeichen, setze zu $LOWER"
-      hostnamectl set-hostname "$LOWER"
+    # 3.1) Kurzen Hostnamen für die Registrierung abfragen
+    read -p "Bitte geben Sie den kurzen Hostnamen (ohne Domain) ein: " SHORT_HOST
+
+    # 3.2) Domain definieren
+    DOMAIN="draco-449.sccloudres.net"
+
+    # 3.3) Eingabe bereinigen (Kleinbuchstaben, Komma entfernen)
+    # Zuerst in Kleinbuchstaben wandeln
+    CLEAN_HOST=$(echo "$SHORT_HOST" | tr '[:upper:]' '[:lower:]')
+    
+    # Trailing-Komma entfernen, falls vorhanden
+    if [[ "${CLEAN_HOST: -1}" == "," ]]; then
+      CLEAN_HOST="${CLEAN_HOST%,}"
+      echo "Trailing-Komma entfernt."
     fi
 
-    echo "Registriere System und binde Repositories ein…"
+    # 3.4) FQDN zusammensetzen
+    HOST_FQDN="${CLEAN_HOST}.${DOMAIN}"
+
+    # 3.5) Hostnamen setzen
+    echo "Setze finalen Hostnamen (FQDN) auf: $HOST_FQDN"
+    hostnamectl set-hostname "$HOST_FQDN"
+
+    # 3.6) Registrierung durchführen
+    echo "Registriere System mit Hostnamen $HOST_FQDN und binde Repositories ein…"
     curl -s -k https://pcms2capsule-5.prd.cms.sccloudinfra.net/pub/register-client.sh | sh
     echo
     echo "Alle Vorgänge erfolgreich abgeschlossen."
