@@ -17,8 +17,6 @@ spec:
       containers:
         - name: elastic-indexer-util-create-reindexer
           image: ivantipartners/elastic-indexer-util:117.0.0-2.production
-          securityContext:
-            privileged: true
           command:
             - /bin/bash
           args:

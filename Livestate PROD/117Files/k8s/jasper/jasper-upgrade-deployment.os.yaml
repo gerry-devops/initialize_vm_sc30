@@ -19,6 +19,8 @@ spec:
       initContainers:
         - name: jasper-initdb-step-1
           image: ivantipartners/jasperreports:117.0.0-904.production
+          securityContext:
+            privileged: true
           command: ["/bin/sh", "-c"]
           args:
             - |

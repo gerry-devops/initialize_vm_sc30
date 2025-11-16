@@ -2,27 +2,25 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: app-inventory-worker-deployment
+  name: device-worker-deployment
   namespace: kafkaworker
   labels:
-    app: app-inventory-worker
+    app: device-worker
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: app-inventory-worker
+      app: device-worker
   template:
     metadata:
-      name: app-inventory-worker
+      name: device-worker
       labels:
-        app: app-inventory-worker
+        app: device-worker
     spec:
       serviceAccountName: privilegedsa
       containers:
-        - name: app-inventory-worker
+        - name: device-worker
           image: ivantipartners/elastic-indexer:117.0.0-2.production
-          securityContext:
-            privileged: true
           ports:
             - containerPort: 3000
           imagePullPolicy: Always
@@ -50,109 +48,109 @@ spec:
             - name: INDEXER_NAME
               valueFrom:
                 configMapKeyRef:
-                  name: app-inventory-worker-configmap
+                  name: device-worker-configmap
                   key: indexer.name
             - name: KAFKA_WORKER_GROUPID
               valueFrom:
                 configMapKeyRef:
-                  name: app-inventory-worker-configmap
+                  name: device-worker-configmap
                   key: kafka.worker.groupid
             - name: KAFKA_WORKER_TOPICS
               valueFrom:
                 configMapKeyRef:
-                  name: app-inventory-worker-configmap
+                  name: device-worker-configmap
                   key: kafka.worker.topics
             - name: KAFKA_WORKER_FAILEDTOPIC
               valueFrom:
                 configMapKeyRef:
-                  name: app-inventory-worker-configmap
+                  name: device-worker-configmap
                   key: kafka.worker.failedtopic
             - name: KAFKA_WORKER_RETRYFAILEDTOPIC
               valueFrom:
                 configMapKeyRef:
-                  name: app-inventory-worker-configmap
+                  name: device-worker-configmap
                   key: kafka.worker.retryfailedtopic
             - name: KAFKA_WORKER_ALIASNAMES
               valueFrom:
                 configMapKeyRef:
-                  name: app-inventory-worker-configmap
+                  name: device-worker-configmap
                   key: kafka.worker.aliasnames
             - name: KAFKA_SSL_ENABLED
               valueFrom:
                 configMapKeyRef:
-                  name: app-inventory-worker-configmap
+                  name: device-worker-configmap
                   key: kafka.ssl.enabled
             - name: JAVA_OPTIONS
               valueFrom:
                 configMapKeyRef:
-                  name: app-inventory-worker-configmap
+                  name: device-worker-configmap
                   key: java.opts
             - name: KAFKA_BOOTSTRAP_SERVERS
               valueFrom:
                 configMapKeyRef:
-                  name: app-inventory-worker-configmap
+                  name: device-worker-configmap
                   key: kafka.hosts
             - name: SPRING_DATASOURCE_URL
               valueFrom:
                 configMapKeyRef:
-                  name: app-inventory-worker-configmap
+                  name: device-worker-configmap
                   key: db.url
             - name: SPRING_DATASOURCE_USERNAME
               valueFrom:
                 secretKeyRef:
-                  name: app-inventory-worker-secret
+                  name: device-worker-secret
                   key: db.username
             - name: SPRING_DATASOURCE_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: app-inventory-worker-secret
+                  name: device-worker-secret
                   key: db.password
             - name: ELASTICSEARCH_URL
               valueFrom:
                 configMapKeyRef:
-                  name: app-inventory-worker-configmap
+                  name: device-worker-configmap
                   key: es.url
             - name: KAFKA_WORKER_MESSAGETOINDEXTYPES
               valueFrom:
                 configMapKeyRef:
-                  name: app-inventory-worker-configmap
+                  name: device-worker-configmap
                   key: kafka.worker.messagetoindextypes
             - name: ZOOKEEPER_LIST
               valueFrom:
                 configMapKeyRef:
-                  name: app-inventory-worker-configmap
+                  name: device-worker-configmap
                   key: zookeeper.hosts
             - name: prefix
               valueFrom:
                 configMapKeyRef:
-                  name: app-inventory-worker-configmap
+                  name: device-worker-configmap
                   key: prefix
             - name: EsClusterNumberOfReplicas
               valueFrom:
                 configMapKeyRef:
-                  name: app-inventory-worker-configmap
+                  name: device-worker-configmap
                   key: es.replicas.number
             - name: reindex_kafka_topic_name
               valueFrom:
                 configMapKeyRef:
-                  name: app-inventory-worker-configmap
+                  name: device-worker-configmap
                   key: reindex.kafka.topic.name
             - name: reindex_es_index_name
               valueFrom:
                 configMapKeyRef:
-                  name: app-inventory-worker-configmap
+                  name: device-worker-configmap
                   key: reindex.es.index.name
             - name: CUSTOMATTRIBUTETRANSFORMATION_DEVICEINDEX_ENABLED
               valueFrom:
                 configMapKeyRef:
-                  name: app-inventory-worker-configmap
+                  name: device-worker-configmap
                   key: customattributetransformation.deviceindex.enabled
           volumeMounts:
-            - name: nfs-share-app-inventory-worker
-              mountPath: /mobileiron.com/data/app-inventory-worker/debug/
+            - name: nfs-share-device-worker
+              mountPath: /mobileiron.com/data/device-worker/debug/
       volumes:
-        - name: nfs-share-app-inventory-worker
+        - name: nfs-share-device-worker
           persistentVolumeClaim:
-            claimName: nfs-pvc-app-inventory-worker
+            claimName: nfs-pvc-device-worker
       imagePullSecrets:
         - name: docker-hub-secret-kafkaworker

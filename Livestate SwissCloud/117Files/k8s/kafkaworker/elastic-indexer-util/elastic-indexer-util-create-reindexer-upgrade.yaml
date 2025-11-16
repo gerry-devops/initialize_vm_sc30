@@ -17,13 +17,16 @@ spec:
       containers:
         - name: elastic-indexer-util-create-reindexer
           image: ivantipartners/elastic-indexer-util:117.0.0-2.production
-          securityContext:
-            privileged: true
           command:
             - /bin/bash
           args:
             - -c
-            - /mobileiron.com/programs/elasticsearch/upgrade-mapping.sh INSTALL
+            - |
+              INDEX=('user_provided_certificate_store')
+              for i in "${INDEX[@]}"
+              do
+                /mobileiron.com/programs/elasticsearch/reindex-es.sh --index $i
+              done
           imagePullPolicy: Always
           env:
             - name: DB_HOST

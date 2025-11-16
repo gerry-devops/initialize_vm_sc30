@@ -17,9 +17,12 @@ spec:
       labels:
         app: universal-worker
     spec:
+      serviceAccountName: privilegedsa
       containers:
         - name: universal-worker
           image: ivantipartners/elastic-indexer:117.0.0-2.production
+          securityContext:
+            privileged: true
           ports:
             - containerPort: 3000
           imagePullPolicy: Always

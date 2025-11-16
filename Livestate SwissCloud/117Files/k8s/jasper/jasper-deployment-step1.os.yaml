@@ -19,8 +19,6 @@ spec:
       initContainers:
         - name: jasper-upgradedb
           image: ivantipartners/jasperreports:117.0.0-904.production
-          securityContext:
-            privileged: true
           command:
             - /mobileiron.com/run.sh
             - upgradedb

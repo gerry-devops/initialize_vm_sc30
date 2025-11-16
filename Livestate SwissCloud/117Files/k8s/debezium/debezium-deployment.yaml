@@ -19,8 +19,6 @@ spec:
       containers:
         - name: debezium
           image: ivantipartners/debezium:117.0.0-2.production
-          securityContext:
-            privileged: true
           ports:
             - containerPort: 8083
             - containerPort: 9012

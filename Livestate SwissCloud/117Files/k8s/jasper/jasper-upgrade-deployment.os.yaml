@@ -19,15 +19,13 @@ spec:
       initContainers:
         - name: jasper-initdb-step-1
           image: ivantipartners/jasperreports:117.0.0-904.production
-          securityContext:
-            privileged: true
-          command:
-            - /mobileiron.com/run-k8s.sh
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              /mobileiron.com/initdb.sh --db-host "$jdbc_host" --build-db-user "$build_db_user" --build-db-pw "$build_db_password" --build-db-name "$build_db_name" --target-db-user "$jdbc_username" --target-db-pw "$jdbc_password" --target-db-name "$jdbc_db_name"
           securityContext:
             privileged: true
           env:
-            - name: OPERATION
-              value: INIT_DB
             - name: jdbc_host
               valueFrom:
                 configMapKeyRef:
@@ -58,6 +56,11 @@ spec:
                 secretKeyRef:
                   name: jasper-secret
                   key: dbpass
+            - name: jdbc_db_name
+              valueFrom:
+                configMapKeyRef:
+                  name: jasper-configmap
+                  key: target.db.name
         - name: jasper-upgradedb-step1
           image: ivantipartners/jasperreports:117.0.0-904.production
           command:

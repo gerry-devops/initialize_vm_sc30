@@ -19,13 +19,10 @@ spec:
       initContainers:
         - name: jasper-upgradedb
           image: ivantipartners/jasperreports:117.0.0-904.production
-          securityContext:
-            privileged: true
           command:
             - /mobileiron.com/run.sh
             - upgradedb
-          securityContext:
-            privileged: true
+          securityContext: {}
           env:
             - name: DB_PASSWORD
               valueFrom:
@@ -106,7 +103,6 @@ spec:
           image: ivantipartners/jasperreports:117.0.0-904.production
           command: ["/bin/sh", "-c"]
           args: ["mkdir -p /mobileiron.com/data/reports && mkdir -p /mobileiron.com/data/reports.bak && /mobileiron.com/run.sh"]
-
           ports:
             - containerPort: 8080
           imagePullPolicy: Always
