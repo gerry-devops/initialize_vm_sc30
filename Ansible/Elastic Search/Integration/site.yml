@@ -1,0 +1,221 @@
+---
+- name: Elasticsearch cluster in Docker (RHEL9, Docker Hub official Elastic image)
+  hosts: elasticsearch
+  become: yes
+  gather_facts: yes
+
+  vars:
+    container_name: "elasticsearch"
+    image_ref: "docker.elastic.co/elasticsearch/elasticsearch:7.10.2"
+    env_dir: "/etc/elasticsearch"
+    env_file: "{{ env_dir }}/es.env"
+    node_roles_effective: "{{ node_roles | default('') }}"
+
+  pre_tasks:
+    # --- Basis-Tools nur installieren, wenn sie fehlen ---
+    - name: Ensure base tools are installed only if missing
+      block:
+        - name: Check if curl is installed
+          command: rpm -q curl
+          register: curl_check
+          ignore_errors: true
+          changed_when: false
+
+        - name: Check if jq is installed
+          command: rpm -q jq
+          register: jq_check
+          ignore_errors: true
+          changed_when: false
+
+        - name: Check if policycoreutils-python-utils is installed
+          command: rpm -q policycoreutils-python-utils
+          register: selinux_check
+          ignore_errors: true
+          changed_when: false
+
+        - name: Install missing base tools
+          dnf:
+            name: >-
+              {{ ['curl'] if curl_check.rc != 0 else [] +
+                 ['jq'] if jq_check.rc != 0 else [] +
+                 ['policycoreutils-python-utils'] if selinux_check.rc != 0 else [] }}
+            state: present
+          when:
+            - curl_check.rc != 0 or jq_check.rc != 0 or selinux_check.rc != 0
+
+    # --- iptables deaktivieren (falls aktiv) ---
+    - name: Disable iptables service
+      service:
+        name: iptables
+        state: stopped
+        enabled: false
+      ignore_errors: true
+
+  tasks:
+    # --- Kernel Parameter ---
+    - name: Ensure vm.max_map_count is set (runtime)
+      sysctl:
+        name: vm.max_map_count
+        value: 262144
+        state: present
+        sysctl_set: yes
+        reload: yes
+
+    - name: Ensure vm.overcommit_memory=1 (runtime)
+      sysctl:
+        name: vm.overcommit_memory
+        value: 1
+        state: present
+        sysctl_set: yes
+        reload: yes
+
+    - name: Persist sysctl settings
+      copy:
+        dest: /etc/sysctl.d/99-elasticsearch.conf
+        content: |
+          vm.max_map_count=262144
+          vm.overcommit_memory=1
+        owner: root
+        group: root
+        mode: "0644"
+      notify: Reload sysctl
+
+    # --- Daten- und Logverzeichnisse ---
+    - name: Wipe data dir (DANGER – deletes all data)
+      file:
+        path: "{{ es_data_dir }}"
+        state: absent
+      when: es_wipe_data | bool
+
+    - name: Create data directory
+      file:
+        path: "{{ es_data_dir }}"
+        state: directory
+        owner: 1000
+        group: 1000
+        mode: "0755"
+
+    - name: Create logs directory
+      file:
+        path: "{{ es_logs_dir }}"
+        state: directory
+        owner: 1000
+        group: 1000
+        mode: "0755"
+
+    # --- SELinux Kontext ---
+    - name: Define SELinux context for data dir
+      community.general.sefcontext:
+        target: "{{ es_data_dir }}(/.*)?"
+        setype: container_file_t
+        state: present
+
+    - name: Define SELinux context for logs dir
+      community.general.sefcontext:
+        target: "{{ es_logs_dir }}(/.*)?"
+        setype: container_file_t
+        state: present
+
+    - name: Apply SELinux contexts
+      command: restorecon -Rv {{ es_data_dir }} {{ es_logs_dir }}
+
+    # --- Bootstrap-Erkennung ---
+    - name: Check whether Elasticsearch data dir looks bootstrapped
+      stat:
+        path: "{{ es_data_dir }}/nodes"
+      register: es_nodes_dir
+
+    - name: Set fact whether this node is the bootstrap master
+      set_fact:
+        is_bootstrap_master: "{{ (inventory_hostname == bootstrap_master_ip) or (node_name | default('') == bootstrap_master_name) }}"
+
+    # --- Env-Datei schreiben ---
+    - name: Ensure env directory exists
+      file:
+        path: "{{ env_dir }}"
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: Write docker env-file for Elasticsearch
+      copy:
+        dest: "{{ env_file }}"
+        owner: root
+        group: root
+        mode: "0644"
+        content: |
+          node.name={{ node_name | default(inventory_hostname) }}
+          cluster.name={{ cluster_name }}
+          discovery.seed_hosts={{ discovery_hosts | join(',') }}
+          {% if is_bootstrap_master %}
+          cluster.initial_master_nodes={{ bootstrap_master_name }}
+          {% endif %}
+          network.host=0.0.0.0
+          network.publish_host={{ hostvars[inventory_hostname].ansible_host | default(inventory_hostname) }}
+          transport.port=9300
+          http.port=9200
+          {% if node_roles_effective | length > 0 %}
+          node.roles={{ node_roles_effective }}
+          {% endif %}
+          bootstrap.memory_lock={{ es_bootstrap_memory_lock }}
+          {% if es_heap is defined and (es_heap | string | length) > 0 %}
+          ES_JAVA_OPTS=-Xms{{ es_heap }} -Xmx{{ es_heap }}
+          {% endif %}
+          xpack.security.enabled={{ xpack_security_enabled }}
+
+    # --- Docker Image / Container ---
+    - name: Check if image already present
+      ansible.builtin.command: >
+        bash -lc "docker image inspect {{ image_ref }} >/dev/null 2>&1"
+      register: img_check
+      changed_when: false
+      failed_when: false
+
+    - name: Pull image from Elastic registry if missing
+      ansible.builtin.command: >
+        bash -lc "docker pull {{ image_ref }}"
+      when: img_check.rc != 0
+
+    - name: Stop container if running
+      ansible.builtin.command: >
+        bash -lc "docker stop {{ container_name }} >/dev/null 2>&1 || true"
+      changed_when: false
+
+    - name: Remove existing container if present
+      ansible.builtin.command: >
+        bash -lc "docker rm {{ container_name }} >/dev/null 2>&1 || true"
+      changed_when: false
+
+    - name: Run Elasticsearch container (host networking, env-file)
+      ansible.builtin.command: >
+        bash -lc '
+        docker run -d --name {{ container_name }} --restart always --network host
+        --cap-add=IPC_LOCK
+        --ulimit nofile={{ es_nofile_limit }}:{{ es_nofile_limit }}
+        --ulimit memlock={{ es_memlock_soft }}:{{ es_memlock_hard }}
+        --env-file {{ env_file }}
+        -v {{ es_data_dir }}:/usr/share/elasticsearch/data:Z
+        -v {{ es_logs_dir }}:/usr/share/elasticsearch/logs:Z
+        {{ image_ref }}
+        '
+      register: run_out
+      failed_when: run_out.rc != 0
+      changed_when: true
+
+    # --- Health Check ---
+    - name: Wait 20 seconds for cluster to come up
+      wait_for:
+        timeout: 20
+
+    - name: Query _cat/nodes from this host
+      ansible.builtin.shell: "curl -s http://127.0.0.1:9200/_cat/nodes?v || true"
+      register: cat_nodes
+
+    - name: Show nodes seen from this host
+      debug:
+        msg: "{{ cat_nodes.stdout }}"
+
+  handlers:
+    - name: Reload sysctl
+      command: sysctl --system
