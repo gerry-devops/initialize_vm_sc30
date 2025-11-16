@@ -1,0 +1,39 @@
+# ===== Cluster-Parameter =====
+cluster_name: "int-es-cluster"
+
+# Der erste Knoten als Bootstrap-Master
+bootstrap_master_name: "es-1"
+bootstrap_master_ip: "10.186.52.60"
+
+# Discovery-Liste (alle Transport-IP/Hosts)
+discovery_hosts:
+  - "10.186.52.60"
+  - "10.186.52.61"
+  - "10.186.52.62"
+
+# ===== Elasticsearch-Version / Image =====
+es_version: "7.10.2"
+image_ref: "docker.elastic.co/elasticsearch/elasticsearch:{{ es_version }}"
+container_name: "elasticsearch"
+
+# ===== Daten / Logs =====
+es_data_dir: "/data/elasticsearch"
+es_logs_dir: "/data/log/elasticsearch"
+
+# ACHTUNG: true löscht das komplette Datadir (Cluster-UUID/Indizes weg!)
+es_wipe_data: false
+
+# ===== JVM / Node Limits =====
+es_heap: "6g"                     # z.B. 2g, 4g
+es_bootstrap_memory_lock: "true"
+es_nofile_limit: 65536
+es_memlock_soft: -1
+es_memlock_hard: -1
+
+# ===== Rollen pro Host (optional) =====
+# Leerlassen = ES Default (data+master+ingest bei 7.x üblich).
+# Beispiel: "master,data,ingest,remote_cluster_client"
+node_roles: ""
+
+# ===== X-Pack Security (für 7.10.2 standardmäßig off, kann an) =====
+xpack_security_enabled: "false"
