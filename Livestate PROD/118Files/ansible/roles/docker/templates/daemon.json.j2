@@ -1,0 +1,18 @@
+{% if logging_fluentd == "true" %}
+    {
+        "userland-proxy": {{ userland_proxy | bool | lower  }},
+        "no-new-privileges": {{ no_new_privileges | bool | lower  }},
+        "dns": {{ dns_servers | to_json }},
+        "log-driver": "{{ log_driver }}",
+        "log-opts": {
+            "fluentd-address": "{{ fluentd_address }}:24224"
+        }
+    }
+{% elif logging_fluentd == "false" %}
+    {
+        "userland-proxy": {{ userland_proxy | bool | lower  }},
+        "no-new-privileges": {{ no_new_privileges | bool | lower  }},
+        "dns": {{ dns_servers | to_json }},
+        "live-restore": true
+    }
+{% endif %}

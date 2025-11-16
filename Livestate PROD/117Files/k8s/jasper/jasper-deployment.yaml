@@ -1,0 +1,163 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: jasper-deployment
+  labels:
+    app: jasper
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: jasper
+  template:
+    metadata:
+      labels:
+        app: jasper
+    spec:
+      initContainers:
+#        - name: jasper-upgradedb
+#          image: ivantipartners/jasperreports:117.0.0-904.production
+#          command:
+#            - /mobileiron.com/run.sh
+#            - upgradedb
+#          securityContext:
+#            privileged: true
+#          env:
+#            - name: DB_PASSWORD
+#              valueFrom:
+#                secretKeyRef:
+#                  name: jasper-secret
+#                  key: build.db.pw
+#            - name: DBHOST
+#              valueFrom:
+#                configMapKeyRef:
+#                  name: jasper-configmap
+#                  key: dbhost
+#            - name: SSLMODE
+#              valueFrom:
+#                configMapKeyRef:
+#                  name: jasper-configmap
+#                  key: dbsslmode
+#            - name: DBUSER
+#              valueFrom:
+#                secretKeyRef:
+#                  name: jasper-secret
+#                  key: dbuser
+#            - name: DBPASS
+#              valueFrom:
+#                secretKeyRef:
+#                  name: jasper-secret
+#                  key: dbpass
+#            - name: POLARISHOST
+#              valueFrom:
+#                configMapKeyRef:
+#                  name: jasper-configmap
+#                  key: hostname
+#            - name: POLARISUSER
+#              valueFrom:
+#                secretKeyRef:
+#                  name: jasper-secret
+#                  key: polarisuser
+#            - name: POLARISPASS
+#              valueFrom:
+#                secretKeyRef:
+#                  name: jasper-secret
+#                  key: polarispass
+#          volumeMounts:
+#            - name: nfs-share-jasper
+#              mountPath: /mobileiron.com/data/java
+        - name: jasper-withdraw-permissions
+          image: ivantipartners/jasperreports:117.0.0-904.production
+          command: ["/bin/sh", "-c"]
+          args:
+            - PGPASSWORD=${DB_PASSWORD} /usr/bin/psql -h ${DBHOST} -U ${DB_USER} -d ${JDBC_DB_NAME} -c "ALTER ROLE ${JDBC_USERNAME} WITH NOCREATEDB;"
+          env:
+            - name: DBHOST
+              valueFrom:
+                configMapKeyRef:
+                  name: jasper-configmap
+                  key: dbhost
+            - name: JDBC_USERNAME
+              valueFrom:
+                configMapKeyRef:
+                  name: jasper-configmap
+                  key: target.db.user
+            - name: JDBC_DB_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: jasper-configmap
+                  key: target.db.name
+            - name: DB_USER
+              valueFrom:
+                configMapKeyRef:
+                  name: jasper-configmap
+                  key: build.db.user
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: jasper-secret
+                  key: build.db.pw
+      containers:
+        - name: jasper
+          image: ivantipartners/jasperreports:117.0.0-904.production
+          command: ["/bin/sh", "-c"]
+          args: ["mkdir -p /mobileiron.com/data/reports && mkdir -p /mobileiron.com/data/reports.bak && /mobileiron.com/run.sh"]
+          ports:
+            - containerPort: 8080
+          imagePullPolicy: Always
+          env:
+            - name: DBHOST
+              valueFrom:
+                configMapKeyRef:
+                  name: jasper-configmap
+                  key: dbhost
+            - name: SSLMODE
+              valueFrom:
+                configMapKeyRef:
+                  name: jasper-configmap
+                  key: dbsslmode
+            - name: MIN_HEAP_SIZE
+              valueFrom:
+                configMapKeyRef:
+                  name: jasper-configmap
+                  key: min.heap
+            - name: MAX_HEAP_SIZE
+              valueFrom:
+                configMapKeyRef:
+                  name: jasper-configmap
+                  key: max.heap
+            - name: DBUSER
+              valueFrom:
+                secretKeyRef:
+                  name: jasper-secret
+                  key: dbuser
+            - name: DBPASS
+              valueFrom:
+                secretKeyRef:
+                  name: jasper-secret
+                  key: dbpass
+            - name: POLARISHOST
+              valueFrom:
+                configMapKeyRef:
+                  name: jasper-configmap
+                  key: hostname
+            - name: POLARISUSER
+              valueFrom:
+                secretKeyRef:
+                  name: jasper-secret
+                  key: polarisuser
+            - name: POLARISPASS
+              valueFrom:
+                secretKeyRef:
+                  name: jasper-secret
+                  key: polarispass
+          volumeMounts:
+            - name: nfs-share-jasper
+              mountPath: /mobileiron.com/data/java
+      volumes:
+        - name: nfs-share-jasper
+          persistentVolumeClaim:
+            claimName: nfs-pvc-jasper
+      imagePullSecrets:
+        - name: docker-hub-secret

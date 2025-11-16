@@ -1,0 +1,21 @@
+---
+- hosts: postgres
+
+  become: true
+
+  vars:
+    elasticsearch_host: "{{ hostvars['elasticsearch-efk'].ansible_host }}"
+    logstash_prefix: "{{ inventory_hostname }}"
+
+  roles:
+    - role: common
+    - role: docker
+    - role: docker-fluentd
+    - role: docker-postgres
+
+  pre_tasks:
+    - name: Set Timezone
+      lineinfile:
+        path: /root/.bashrc
+        regexp: '^TZ='
+        line: export TZ=UTC

@@ -1,0 +1,30 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: universal-worker-configmap
+  namespace: kafkaworker
+data:
+  indexer.name: "universal-worker"
+  kafka.worker.groupid: "universal_workers"
+  kafka.worker.topics: "dbserver1.public.account,dbserver1.public.notification_thread,dbserver1.public.ca_certificate_store,dbserver1.public.application_version,dbserver1.public.review_app,dbserver1.public.content_version,dbserver1.public.alcor_tunnel,dbserver1.public.dep_device,dbserver1.public.account_group,dbserver1.public.script,device-app-feedback,dbserver1.public.policy,dbserver1.public.user_provided_certificate_store,dbserver1.public.predicate"
+  kafka.worker.failedtopic: "universal_failed"
+  kafka.worker.retryfailedtopic: "universal_retry_failed"
+  kafka.worker.indextypes: "{'AuditTrailTopic':'AUDIT_TRAIL','device-log':'DEVICE_LOG','device-app-feedback':'DEVICE_APP_FEEDBACK'}"
+  kafka.worker.aliasnames: "{'ACCOUNT':'accounts','ACCOUNT_GROUP':'account_groups','ALCOR_TUNNEL':'unmanaged_tunnels','APPLICATION_VERSION':'applications','CA_CERTIFICATE_STORE':'certificates','CONTENT_VERSION':'contents','DEP_DEVICE':'dep_devices','DEVICE_APP_FEEDBACK':'device_app_feedbacks','NOTIFICATION_THREAD':'notification_threads','POLICY':'policies','REVIEW_APP':'reviews','SCRIPT':'scripts','USER_PROVIDED_CERTIFICATE_STORE':'user_provided_certificate_store','PREDICATE':'predicates'}"
+  kafka.worker.extractortype: "universalExtractor"
+  kafka.worker.preprocessortype: "universalProcessor"
+  kafka.worker.transformertype: "universalTransformer"
+  kafka.worker.indextype: "universal"
+  kafka.worker.fetchmaxwait: "250"
+  kafka.ssl.enabled: "false"
+  kafka.hosts: "kafka-0.cluster.datasvcs:9092,kafka-1.cluster.datasvcs:9092,kafka-2.cluster.datasvcs:9092"
+  java.opts: "-Xmx768m -Xms512m"
+  db.url: "jdbc:postgresql://postgres.cluster.datasvcs:5432/polaris?sslmode=disable"
+  es.url: "http://elasticsearch-0.cluster.datasvcs:9200"
+  es.replicas.number: "1"
+  prefix: "''"
+  reindex.kafka.topic.name: "<reindex_kafka_topic_name>"
+  reindex.es.index.name: "<reindex_es_index_name>"
+  device.custom.transformation.enabled: "false"
+  account.custom.transformation.enabled: "true"

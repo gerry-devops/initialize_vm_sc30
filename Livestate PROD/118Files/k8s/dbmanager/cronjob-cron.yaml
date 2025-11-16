@@ -1,0 +1,111 @@
+---
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  name: cron
+  namespace: dbmanager
+spec:
+  schedule: "*/15 * * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+            - name: cron
+              image: ivantipartners/dbmanager:118.0.0-151.production
+              command: ["/bin/sh", "-c"]
+              args:
+                - |
+                  echo "*:5432:polaris_rpt:polaris_rpt:$(echo $RPT_PASSWORD | sed 's/\([:\\]\)/\\\1/g')" >> ~/.pgpass;
+                  echo "*:5432:polaris:polaris:$(echo $POLARIS_DB_PASSWORD | sed 's/\([:\\]\)/\\\1/g')" >> ~/.pgpass;
+                  chmod 400 ~/.pgpass;
+                  dt=$(date "+%Y-%m-%d-%H:%M:%S");
+                  /mobileiron.com/data/cloudops/rpt/cron.sh;
+                  cat /mobileiron.com/data/cloudops/reporting.log \
+                  >> ${DBMANAGER_PATH}/cron_report/reporting_$dt.log;
+              env:
+                - name: CLOUDOPS_DIR
+                  valueFrom:
+                    configMapKeyRef:
+                      name: dbmanager-configmap
+                      key: cloudops.dir
+                - name: RPT_DIR
+                  valueFrom:
+                    configMapKeyRef:
+                      name: dbmanager-configmap
+                      key: rpt.dir
+                - name: POLARIS_DB_HOST
+                  valueFrom:
+                    configMapKeyRef:
+                      name: dbmanager-configmap
+                      key: db.host
+                - name: DB_PORT
+                  valueFrom:
+                    configMapKeyRef:
+                      name: dbmanager-configmap
+                      key: db.port
+                - name: DB_USERNAME
+                  valueFrom:
+                    configMapKeyRef:
+                      name: dbmanager-configmap
+                      key: db.username
+                - name: DB_NAME
+                  valueFrom:
+                    configMapKeyRef:
+                      name: dbmanager-configmap
+                      key: db.name
+                - name: DB_SSLMODE
+                  valueFrom:
+                    configMapKeyRef:
+                      name: dbmanager-configmap
+                      key: db.sslmode
+                - name: RPT_HOST
+                  valueFrom:
+                    configMapKeyRef:
+                      name: dbmanager-configmap
+                      key: rpt.host
+                - name: RPT_PORT
+                  valueFrom:
+                    configMapKeyRef:
+                      name: dbmanager-configmap
+                      key: rpt.port
+                - name: RPT_LOGIN
+                  valueFrom:
+                    configMapKeyRef:
+                      name: dbmanager-configmap
+                      key: rpt.login
+                - name: RPT_NAME
+                  valueFrom:
+                    configMapKeyRef:
+                      name: dbmanager-configmap
+                      key: rpt.name
+                - name: RPT_SSLMODE
+                  valueFrom:
+                    configMapKeyRef:
+                      name: dbmanager-configmap
+                      key: rpt.sslmode
+                - name: POLARIS_DB_PASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: dbmanager-secret
+                      key: db.password
+                - name: RPT_PASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: dbmanager-secret
+                      key: rpt.password
+                - name: DBMANAGER_PATH
+                  valueFrom:
+                    configMapKeyRef:
+                      name: dbmanager-configmap
+                      key: dbmanager.path
+              volumeMounts:
+                - name: nfs-share-dbmanager
+                  mountPath: /mobileiron.com/data/dbmanager/
+          volumes:
+            - name: nfs-share-dbmanager
+              persistentVolumeClaim:
+                claimName: nfs-pvc-dbmanager
+          restartPolicy: OnFailure
+          imagePullSecrets:
+            - name: docker-hub-secret-dbmanager

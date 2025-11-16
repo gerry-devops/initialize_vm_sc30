@@ -1,0 +1,77 @@
+# PV for /mobileiron.com/data/reports
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: nfs-pv-reporting-reports
+spec:
+  capacity:
+    storage: 10Gi
+  accessModes:
+    - ReadWriteMany
+  persistentVolumeReclaimPolicy: Retain
+  nfs:
+    path: /mobileiron.com/data/reports/
+    server: nfs-server.cluster.datasvcs
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: nfs-pvc-reporting-reports
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 10Gi
+---
+# PV for /mobileiron.com/data/reports.bak
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: nfs-pv-reporting-reports-bak
+spec:
+  capacity:
+    storage: 10Gi
+  accessModes:
+    - ReadWriteMany
+  persistentVolumeReclaimPolicy: Retain
+  nfs:
+    path: /mobileiron.com/data/reports.bak/
+    server: nfs-server.cluster.datasvcs
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: nfs-pvc-reporting-reports-bak
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 10Gi
+---
+# PV for /mobileiron.com/data/java
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: nfs-pv-reporting-java
+spec:
+  capacity:
+    storage: 10Gi
+  accessModes:
+    - ReadWriteMany
+  persistentVolumeReclaimPolicy: Retain
+  nfs:
+    path: /mobileiron.com/data/java/
+    server: nfs-server.cluster.datasvcs
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: nfs-pvc-reporting-java
+spec:
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 10Gi

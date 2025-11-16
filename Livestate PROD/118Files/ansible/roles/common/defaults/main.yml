@@ -1,0 +1,10 @@
+---
+epel_release_verison: 7-11
+
+packages:
+  RedHat:
+    - python2-pip
+    - ntp
+
+pip_docker_version: 5.0.0
+pip_six_version: 1.16.0

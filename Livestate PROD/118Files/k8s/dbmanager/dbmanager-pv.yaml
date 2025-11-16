@@ -1,0 +1,15 @@
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: nfs-pv-dbmanager
+  namespace: dbmanager
+spec:
+  capacity:
+    storage: 1Gi
+  accessModes:
+    - ReadWriteMany
+  nfs:
+    path: /mobileiron.com/data/dbmanager/
+    server: nfs-server.cluster.datasvcs
+  persistentVolumeReclaimPolicy: Retain

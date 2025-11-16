@@ -1,0 +1,34 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: device-snapshot-configmap
+  namespace: kafkaworker
+data:
+  indexer.name: "device-snapshot-worker"
+  kafka.worker.groupid: "device-snapshots-worker"
+  kafka.worker.topics: "device-snapshot"
+  kafka.worker.failedtopic: "device-snapshot_failed"
+  kafka.worker.retryfailedtopic: "device-snapshot_retry_failed"
+  kafka.worker.extractortype: "payloadExtractor"
+  kafka.worker.preprocessortype: "syncEventNoKeyProcessor"
+  kafka.worker.transformertype: "elasticSearchDeviceSnapshotTransformer"
+  kafka.worker.indextype: "DEVICE_SNAPSHOT"
+  kafka.worker.aliasnames: "{'DEVICE_SNAPSHOT':'device_snapshots'}"
+  kafka.worker.fetchmaxwait: "250"
+  kafka.streams.devicesnapshot.dedupenabled: "true"
+  kafka.streams.devicesnapshot.sourcetopic: structured-data-compacted
+  kafka.streams.devicesnapshot.destinationtopic: device-snapshot
+  kafka.streams.devicesnapshot.replication.factor: "1"
+  kafka.streams.devicesnapshot.min.insync.replicas: "1"
+  kafka.ssl.enabled: "false"
+  kafka.hosts: "kafka-0.cluster.datasvcs:9092,kafka-1.cluster.datasvcs:9092,kafka-2.cluster.datasvcs:9092"
+  java.opts: "-Xmx1024m -Xms512m"
+  db.url: "jdbc:postgresql://postgres.cluster.datasvcs:5432/polaris?sslmode=disable"
+  zookeeper.hosts: "zookeeper-0.cluster.datasvcs:2181,zookeeper-1.cluster.datasvcs:2181,zookeeper-2.cluster.datasvcs:2181"
+  es.url: "http://elasticsearch-0.cluster.datasvcs:9200"
+  es.replicas.number: "1"
+  prefix: "''"
+  reindex.kafka.topic.name: "<reindex_kafka_topic_name>"
+  reindex.es.index.name: "<reindex_es_index_name>"
+  customattributetransformation.deviceindex.enabled: "false"

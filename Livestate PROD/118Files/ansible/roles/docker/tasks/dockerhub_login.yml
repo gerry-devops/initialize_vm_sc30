@@ -1,0 +1,15 @@
+---
+- name: Set Python version to 3.6.8
+  set_fact:
+    ansible_python_interpreter: "/usr/bin/python3"
+
+- name: login to the docker registry
+  docker_login:
+    username: "{{ docker_registry_username | mandatory }}"
+    password: "{{ docker_registry_password | mandatory }}"
+    tls: true
+    reauthorize: yes
+
+- name: Set Python version to 2.7.5
+  set_fact:
+    ansible_python_interpreter: "/usr/bin/python"

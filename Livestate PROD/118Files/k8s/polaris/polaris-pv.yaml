@@ -1,0 +1,45 @@
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: nfs-pv
+spec:
+  capacity:
+    storage: 20Gi
+  accessModes:
+    - ReadWriteMany
+  mountOptions:
+    - noexec
+    - nosuid
+    - nodev
+    - intr
+    - timeo=10
+    - retrans=4
+    - hard
+  nfs:
+    path: /mobileiron.com/data/polaris/cdn
+    server: nfs-server.cluster.datasvcs
+  persistentVolumeReclaimPolicy: Retain
+
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: nfs-pv-polaris-debug
+spec:
+  capacity:
+    storage: 1Gi
+  accessModes:
+    - ReadWriteMany
+  mountOptions:
+    - noexec
+    - nosuid
+    - nodev
+    - intr
+    - timeo=10
+    - retrans=4
+    - hard
+  nfs:
+    path: /mobileiron.com/data/polaris/debug
+    server: nfs-server.cluster.datasvcs
+  persistentVolumeReclaimPolicy: Retain

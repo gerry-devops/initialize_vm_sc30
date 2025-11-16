@@ -1,0 +1,15 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: jasper-configmap
+data:
+  dbhost: postgres.cluster.datasvcs
+  dbsslmode: disable
+  hostname: httpd-service
+  min.heap: 1g
+  max.heap: 2g
+  build.db.user: miadmin
+  build.db.name: postgres
+  target.db.user: jasper
+  target.db.name: jasperserver

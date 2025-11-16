@@ -1,0 +1,20 @@
+---
+- name: make sure that awscli is installed
+  pip:
+    name: awscli
+
+- name: get ECR authorization-token
+  shell: "aws --region {{ aws_region }} ecr get-authorization-token --output json"
+  environment:
+    AWS_ACCESS_KEY_ID: "{{ aws_access_key_id }}"
+    AWS_SECRET_ACCESS_KEY: "{{ aws_secret_access_key }}"
+  register: ecr_data
+  changed_when: false
+
+- name: login to the AWS ECR
+  docker_login:
+    username: AWS
+    password: "{{ (ecr_data.stdout | from_json | json_query('authorizationData[0].authorizationToken') | b64decode).split(':')[1] }}"
+    registry_url: "{{ ecr_data.stdout | from_json | json_query('authorizationData[0].proxyEndpoint') }}"
+    tls: true
+    reauthorize: yes

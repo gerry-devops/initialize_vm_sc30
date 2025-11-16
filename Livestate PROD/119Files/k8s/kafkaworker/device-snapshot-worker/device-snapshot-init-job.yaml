@@ -1,0 +1,42 @@
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: device-snapshots-init-job
+  namespace: kafkaworker
+spec:
+  backoffLimit: 0
+  template:
+    metadata:
+      name: device-snapshots-init-job
+      labels:
+        app: device-snapshots-init-job
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: device-snapshots-init
+          image: ivantipartners/elastic-indexer:119.0.0-4.production
+          command:
+            - /bin/bash
+          args:
+            - -c
+            - ./curl-mappings.sh --host ${ES_HOST} --prefix ${PREFIX} --replicas ${ES_NUMBER_REPLICAS} --init_kafka_indices
+          imagePullPolicy: Always
+          env:
+            - name: ES_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: device-snapshot-configmap
+                  key: es.url
+            - name: ES_NUMBER_REPLICAS
+              valueFrom:
+                configMapKeyRef:
+                  name: device-snapshot-configmap
+                  key: es.replicas.number
+            - name: PREFIX
+              valueFrom:
+                configMapKeyRef:
+                  name: device-snapshot-configmap
+                  key: prefix
+      imagePullSecrets:
+        - name: docker-hub-secret-kafkaworker

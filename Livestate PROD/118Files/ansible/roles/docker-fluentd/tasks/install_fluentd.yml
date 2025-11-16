@@ -1,0 +1,25 @@
+---
+- name: Set Python version to 3.6.8
+  set_fact:
+    ansible_python_interpreter: "/usr/bin/python3"
+
+- name: Run fluentd container
+  docker_container:
+    name: "{{ fluentd_container_name }}"
+    image: "{{ fluentd_image }}:{{ fluentd_tag }}"
+    pull: yes
+    state: started
+    ports:
+      - "{{ fluentd_port }}:24224"
+    restart_policy: always
+    env:
+      ELASTICSEARCH_HOST: "{{ elasticsearch_host | mandatory }}"
+      LOGSTASH_PREFIX: "{{ logstash_prefix | mandatory }}"
+    # read_only: yes
+    security_opts:
+      - no-new-privileges
+    log_driver: json-file
+
+- name: Set Python version to 2.7.5
+  set_fact:
+    ansible_python_interpreter: "/usr/bin/python"

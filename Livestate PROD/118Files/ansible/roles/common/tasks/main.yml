@@ -1,0 +1,91 @@
+---
+- name: install epel-repo
+  yum:
+    name: "epel-release-{{ epel_release_verison }}"
+    state: present
+  when: ansible_os_family == 'RedHat'
+  register: status
+  ignore_errors: True
+
+# Uncomment and comment lines in the epel config to avoid the issue:
+# [Errno -1] repomd.xml does not match metalink for epel
+- name: Uncomment baseurl in the epel repo config
+  replace:
+    path: /etc/yum.repos.d/epel.repo
+    regexp: '^#baseurl'
+    replace: 'baseurl'
+  when: ansible_os_family == 'RedHat'
+
+- name: Comment metalink in the epel repo config
+  replace:
+    path: /etc/yum.repos.d/epel.repo
+    regexp: '^metalink'
+    replace: '#metalink'
+  when: ansible_os_family == 'RedHat'
+
+- name: install common packages
+  yum:
+    name: "{{ packages[ansible_os_family] }}"
+    state: present
+  register: yum_status
+  ignore_errors: True
+
+# To resolve the issue "yum return error: [Errno 256] No more mirrors to try"
+# https://access.redhat.com/solutions/203603
+- name: Remove directory with yum cache recursively
+  file:
+    path: /var/cache/yum
+    state: absent
+  when: status.failed == True or yum_status.failed == True
+
+# It's not possible to use ansible yum module.
+# From the official docs:
+# https://docs.ansible.com/ansible/latest/modules/yum_module.html
+# The yum module does not support clearing yum cache in an idempotent way,
+# so it was decided not to implement it, the only method is to use command
+# and call the yum command directly, namely “command: yum clean all”
+- name: Clean yum metadata to avoid the issue with BaseURL for epel repo
+  shell: yum clean all
+  changed_when: false
+  args:
+    warn: no
+  when: status.failed == True or yum_status.failed == True
+
+- name: install epel-repo 2nd attempt
+  yum:
+    name: "epel-release-{{ epel_release_verison }}"
+    state: present
+  when: status.failed == True
+  register: status2
+  until: status2.failed == False
+  retries: 10
+  delay: 30
+
+- name: install common packages 2nd attempt
+  yum:
+    name: "{{ packages[ansible_os_family] }}"
+    state: present
+  when: yum_status.failed == True
+  register: yum_status2
+  until: yum_status2.failed == False
+  retries: 10
+  delay: 30
+
+- name: Reinstall python3-pip
+  shell: |
+    yum remove python3-pip -y
+    yum install python3-pip -y
+
+- name: install python modules
+  pip:
+    name:
+      - docker=={{ pip_docker_version }}
+      - six=={{ pip_six_version }}
+    executable: pip3
+
+- name: enable and start ntpd
+  service:
+    name: ntpd
+    state: started
+    enabled: yes
+

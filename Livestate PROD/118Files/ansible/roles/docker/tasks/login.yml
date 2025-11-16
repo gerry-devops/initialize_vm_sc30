@@ -1,0 +1,6 @@
+---
+- include_tasks: dockerhub_login.yml
+  when: docker_registry_url.startswith('index.docker.io')
+
+- include_tasks: ecr_login.yml
+  when: docker_registry_url is match(".*.dkr.ecr..*.amazonaws.com")

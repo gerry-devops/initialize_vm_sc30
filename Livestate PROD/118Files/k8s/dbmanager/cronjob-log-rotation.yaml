@@ -1,0 +1,34 @@
+---
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  name: log-rotation
+  namespace: dbmanager
+spec:
+  schedule: "0 2 5,20 * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+            - name: log-rotation
+              image: ivantipartners/dbmanager:118.0.0-151.production
+              command: ["/bin/sh", "-c"]
+              args:
+                - |
+                  ./mobileiron.com/log-rotation.py -p ${LOG_PATH} -s ${SAVE_PERIOD};
+              env:
+                - name: LOG_PATH
+                  value: "/mobileiron.com/data/dbmanager/cron_report"
+                - name: SAVE_PERIOD
+                  value: "14"
+              volumeMounts:
+                - name: nfs-share-dbmanager
+                  mountPath: /mobileiron.com/data/dbmanager/
+          volumes:
+            - name: nfs-share-dbmanager
+              persistentVolumeClaim:
+                claimName: nfs-pvc-dbmanager
+          restartPolicy: OnFailure
+          imagePullSecrets:
+            - name: docker-hub-secret-dbmanager

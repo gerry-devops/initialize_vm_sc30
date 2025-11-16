@@ -1,0 +1,16 @@
+---
+nfs_exports_parameter:
+  - /mobileiron.com/data/polaris/cdn *(rw,sync,no_root_squash)
+  - /mobileiron.com/data/polaris/debug *(rw,sync,no_root_squash)
+  - /mobileiron.com/data/dbmanager/ *(rw,sync,no_root_squash)
+  - /mobileiron.com/data/debezium/debug/ *(rw,sync,no_root_squash)
+  - /mobileiron.com/data/app-inventory-worker/debug/ *(rw,sync,no_root_squash)
+  - /mobileiron.com/data/audit-trail-worker/debug/ *(rw,sync,no_root_squash)
+  - /mobileiron.com/data/device-log-worker/debug/ *(rw,sync,no_root_squash)
+  - /mobileiron.com/data/device-worker/debug/ *(rw,sync,no_root_squash)
+  - /mobileiron.com/data/device-snapshot-worker/debug/ *(rw,sync,no_root_squash)
+  - /mobileiron.com/data/universal-worker/debug/ *(rw,sync,no_root_squash)
+  - /mobileiron.com/data/java/ *(rw,sync,no_root_squash)
+  - /mobileiron.com/data/secrets/ *(rw,sync,no_root_squash)
+  - /mobileiron.com/data/reports *(rw,sync,no_root_squash)
+  - /mobileiron.com/data/reports.bak *(rw,sync,no_root_squash)

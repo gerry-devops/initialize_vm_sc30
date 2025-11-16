@@ -1,0 +1,36 @@
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: pre-setup-job
+  namespace: dbmanager
+spec:
+  backoffLimit: 0
+  template:
+    spec:
+      containers:
+        - name: pre-setup-job
+          image: ivantipartners/dbmanager:117.0.0-149.production
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              list=(cron_report tenant_report partition_rollup_report cleanup_audit_tables_report \
+              rebuild_indexes_report account_login_history_report vacuum_audit_tables_report bloat_tables_indexes_list);
+              for item in ${list[@]}; do mkdir -p ${DBMANAGER_PATH}/${item}; done;
+          env:
+            - name: DBMANAGER_PATH
+              valueFrom:
+                configMapKeyRef:
+                  name: dbmanager-configmap
+                  key: dbmanager.path
+          imagePullPolicy: Always
+          volumeMounts:
+            - name: nfs-share-dbmanager
+              mountPath: /mobileiron.com/data/dbmanager/
+      volumes:
+        - name: nfs-share-dbmanager
+          persistentVolumeClaim:
+            claimName: nfs-pvc-dbmanager
+      restartPolicy: Never
+      imagePullSecrets:
+        - name: docker-hub-secret-dbmanager

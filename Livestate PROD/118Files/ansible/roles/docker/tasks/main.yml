@@ -1,0 +1,25 @@
+---
+- name : import geerlingguy.docker role
+  import_role:
+    name: geerlingguy.docker
+  vars:
+    docker_install_compose: false
+    docker_edition: 'ce'
+    docker_packages:
+      - "docker-{{ docker_edition }}-{{ docker_version }}"
+      - "docker-{{ docker_edition }}-cli-{{ docker_version }}"
+      - "docker-{{ docker_edition }}-rootless-extras-{{ docker_version }}"
+    docker_packages_state: present
+  when: docker_required | default(false)
+
+- name: create Docker daemon config
+  template:
+    src: templates/daemon.json.j2
+    dest: /etc/docker/daemon.json
+  notify: restart docker
+
+- name: flush handlers
+  meta: flush_handlers
+
+- include_tasks: login.yml
+  when: docker_login_required

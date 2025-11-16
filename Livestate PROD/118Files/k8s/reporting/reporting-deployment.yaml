@@ -1,0 +1,131 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: reporting-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: reporting-deployment
+  template:
+    metadata:
+      labels:
+        app: reporting-deployment
+    spec:
+      containers:
+        - name: reporting
+          image: ivantipartners/reporting:118.0.0-4.production
+          command:
+            - /mobileiron.com/entrypoint.sh
+          env:
+            - name: jdbc_host
+              valueFrom:
+                configMapKeyRef:
+                  name: reporting-configmap
+                  key: jdbc_host
+            - name: SSLMODE
+              valueFrom:
+                configMapKeyRef:
+                  name: reporting-configmap
+                  key: ssl_mode
+            - name: build_db_name
+              valueFrom:
+                configMapKeyRef:
+                  name: reporting-configmap
+                  key: build_db_name
+            - name: POLARIS_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: reporting-configmap
+                  key: hostname
+
+            - name: build_db_user
+              valueFrom:
+                secretKeyRef:
+                  name: reporting-secrets
+                  key: build_db_user
+            - name: build_db_password
+              valueFrom:
+                secretKeyRef:
+                  name: reporting-secrets
+                  key: build_db_password
+
+            - name: dbUsername
+              valueFrom:
+                secretKeyRef:
+                  name: reporting-secrets
+                  key: dbUsername
+            - name: dbPassword
+              valueFrom:
+                secretKeyRef:
+                  name: reporting-secrets
+                  key: dbPassword
+
+            - name: DB_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: reporting-secrets
+                  key: dbUsername
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: reporting-secrets
+                  key: dbPassword
+
+            - name: POLARIS_DB_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: reporting-secrets
+                  key: polarisDBUsername
+            - name: POLARIS_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: reporting-secrets
+                  key: polarisDBPassword
+
+            - name: admin_password
+              valueFrom:
+                secretKeyRef:
+                  name: reporting-secrets
+                  key: admin_password
+
+            - name: SPRING_PROFILES_ACTIVE
+              value: prod
+            - name: SPRING_CONFIG_LOCATION
+              value: file:/etc/config/
+
+          volumeMounts:
+            - name: secret-volume
+              mountPath: /etc/secret-volume
+              readOnly: true
+            - name: configmap-volume
+              mountPath: /etc/config
+              readOnly: true
+            - name: reports-volume
+              mountPath: /mobileiron.com/data/reports
+            - name: reports-bak-volume
+              mountPath: /mobileiron.com/data/reports.bak
+            - name: java-volume
+              mountPath: /mobileiron.com/data/java
+
+      volumes:
+        - name: secret-volume
+          secret:
+            secretName: reporting-secrets
+        - name: configmap-volume
+          configMap:
+            name: reporting-configmap
+            items:
+              - key: application-prod.properties
+                path: application-prod.properties
+        - name: reports-volume
+          persistentVolumeClaim:
+            claimName: nfs-pvc-reporting-reports
+        - name: reports-bak-volume
+          persistentVolumeClaim:
+            claimName: nfs-pvc-reporting-reports-bak
+        - name: java-volume
+          persistentVolumeClaim:
+            claimName: nfs-pvc-reporting-java
+      imagePullSecrets:
+        - name: docker-hub-secret

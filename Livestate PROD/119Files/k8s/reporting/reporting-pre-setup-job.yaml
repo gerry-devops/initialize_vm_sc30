@@ -1,0 +1,87 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: reporting-pre-setup
+spec:
+  backoffLimit: 0
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: reporting-deployment
+          image: ivantipartners/reporting:119.0.0-4.production
+          command:
+            - /mobileiron.com/entrypoint.sh
+          env:
+            - name: OPERATION
+              value: INIT_DB
+            - name: jdbc_host
+              valueFrom:
+                configMapKeyRef:
+                  name: reporting-configmap
+                  key: jdbc_host
+            - name: ssl_mode
+              value: disable
+            - name: build_db_name
+              valueFrom:
+                configMapKeyRef:
+                  name: reporting-configmap
+                  key: build_db_name
+            - name: POLARIS_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: reporting-configmap
+                  key: hostname
+
+            - name: build_db_user
+              valueFrom:
+                secretKeyRef:
+                  name: reporting-secrets
+                  key: build_db_user
+            - name: build_db_password
+              valueFrom:
+                secretKeyRef:
+                  name: reporting-secrets
+                  key: build_db_password
+
+            - name: dbUsername
+              valueFrom:
+                secretKeyRef:
+                  name: reporting-secrets
+                  key: dbUsername
+            - name: dbPassword
+              valueFrom:
+                secretKeyRef:
+                  name: reporting-secrets
+                  key: dbPassword
+
+            - name: POLARISUSER
+              valueFrom:
+                secretKeyRef:
+                  name: reporting-secrets
+                  key: polarisDBUsername
+            - name: POLARISPASS
+              valueFrom:
+                secretKeyRef:
+                  name: reporting-secrets
+                  key: polarisDBPassword
+
+            - name: SPRING_PROFILES_ACTIVE
+              value: prod
+          volumeMounts:
+            - name: secret-volume
+              mountPath: /etc/secret-volume
+              readOnly: true
+            - name: configmap-volume
+              mountPath: /etc/config
+              readOnly: true
+
+      volumes:
+        - name: secret-volume
+          secret:
+            secretName: reporting-secrets
+        - name: configmap-volume
+          configMap:
+            name: reporting-configmap
+      imagePullSecrets:
+        - name: docker-hub-secret

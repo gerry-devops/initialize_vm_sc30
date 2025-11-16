@@ -1,0 +1,198 @@
+---
+- name: Add firewalld rule to allow port 5432
+  firewalld:
+    port: 5432/tcp
+    permanent: true
+    state: enabled
+  register: firewalld
+
+- name: Reload firewalld
+  service:
+    name: firewalld
+    state: reloaded
+  when: firewalld.changed
+
+- name: install postgres yum repo
+  yum:
+    name: https://download.postgresql.org/pub/repos/yum/reporpms/EL-7-x86_64/pgdg-redhat-repo-latest.noarch.rpm
+    state: present
+    validate_certs: no
+
+- name: install postgres client libraries
+  yum:
+    name: postgresql13
+    state: latest
+  register: status
+  ignore_errors: True
+
+- name: install postgres client libraries in the 2nd attempt
+  yum:
+    name: postgresql13
+    state: latest
+  when: status.failed == True
+  register: status2
+  until: status2.failed == False
+  retries: 10
+  delay: 30
+
+- name: create volume directory
+  file:
+    path: /var/lib/postgresql/data
+    state: directory
+
+- name: Set Python version to 3.6.8
+  set_fact:
+    ansible_python_interpreter: "/usr/bin/python3"
+
+- name: run postgres container
+  docker_container:
+    name: "{{ postgres_container_name }}"
+    image: "{{ postgres_image }}:{{ postgres_tag }}"
+    pull: yes
+    state: started
+    env:
+      POSTGRES_USER: "{{ postgres_user }}"
+      POSTGRES_PASSWORD: "{{ postgres_password }}"
+    ports:
+      - "{{ postgres_port }}:5432"
+    volumes:
+      - /var/lib/postgresql/data:/var/lib/postgresql/data
+    restart_policy: always
+    # read_only: yes
+    security_opts:
+      - no-new-privileges
+  register: run_postgres
+  ignore_errors: true
+
+- name: Flush all the existing iptables rules
+  iptables:
+    flush: yes
+  when: run_postgres is failed
+
+- name: Restart Docker service
+  service:
+    name: docker
+    state: restarted
+  when: run_postgres is failed
+  register: restart_docker
+
+- name: Reset failed state of docker.service in case of failing docker restart
+  systemd:
+    name: docker.service
+    state: reset-failed
+  when: restart_docker is failed
+
+- name: Start docker.service in case of failing docker restart
+  systemd:
+    name: docker.service
+    state: started
+  when: restart_docker is failed
+
+- name: Pause execution for 60 seconds to make sure that Docker service is up and running
+  shell: sleep 60
+  when: run_postgres is failed
+
+- name: run postgres container
+  docker_container:
+    name: "{{ postgres_container_name }}"
+    image: "{{ postgres_image }}:{{ postgres_tag }}"
+    pull: yes
+    state: started
+    env:
+      POSTGRES_USER: "{{ postgres_user }}"
+      POSTGRES_PASSWORD: "{{ postgres_password }}"
+    ports:
+      - "{{ postgres_port }}:5432"
+    volumes:
+      - /var/lib/postgresql/data:/var/lib/postgresql/data
+    restart_policy: always
+    # read_only: yes
+    security_opts:
+      - no-new-privileges
+  when: run_postgres is failed
+
+- name: Set Python version to 2.7.5
+  set_fact:
+    ansible_python_interpreter: "/usr/bin/python"
+
+- name: update postgres config
+  template:
+    src: postgresql.conf.j2
+    dest: /var/lib/postgresql/data/postgresql.conf
+  register: pgconf
+
+- name: Set Python version to 3.6.8
+  set_fact:
+    ansible_python_interpreter: "/usr/bin/python3"
+
+- name: restart postgres container
+  docker_container:
+    name: "{{ postgres_container_name }}"
+    image: "{{ postgres_image }}:{{ postgres_tag }}"
+    state: started
+    restart: yes
+  when: pgconf.changed
+
+- name: Set Python version to 2.7.5
+  set_fact:
+    ansible_python_interpreter: "/usr/bin/python"
+
+- name: add db creation script
+  template:
+    src: initdb.sh.j2
+    dest: /etc/initdb.sh
+    mode: 0550
+
+- name: run db creation script polaris db
+  command:
+    argv:
+      - /etc/initdb.sh
+      - --db-host
+      - 127.0.0.1
+      - --build-db-user
+      - "{{ postgres_user }}"
+      - --build-db-pw
+      - "{{ postgres_password }}"
+      - --build-db-name
+      - postgres
+      - --target-db-user
+      - polaris
+      - --target-db-pw
+      - polaris123
+      - --target-db-name
+      - polaris
+  register: db_init_status
+  until:
+    - db_init_status.rc == 0
+  retries: 10
+  delay: 10
+
+- name: run db creation script rpt db
+  command:
+    argv:
+      - /etc/initdb.sh
+      - --db-host
+      - 127.0.0.1
+      - --build-db-user
+      - "{{ postgres_user }}"
+      - --build-db-pw
+      - "{{ postgres_password }}"
+      - --build-db-name
+      - postgres
+      - --target-db-user
+      - polaris_rpt
+      - --target-db-pw
+      - polaris123
+      - --target-db-name
+      - polaris_rpt
+  register: rpt_db_status
+  until:
+    - rpt_db_status.rc == 0
+  retries: 10
+  delay: 10
+
+- name: add cron entry to start docker container on reboot
+  cron:
+    name: "start docker container on reboot"
+    special_time: reboot
+    job: "sleep 10 && docker start {{ postgres_container_name }}"

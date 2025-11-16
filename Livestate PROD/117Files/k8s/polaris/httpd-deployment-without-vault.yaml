@@ -1,0 +1,82 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: httpd-deployment
+  labels:
+    app: httpd
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: httpd
+  template:
+    metadata:
+      labels:
+        app: httpd
+    spec:
+      serviceAccountName: vault-auth
+      containers:
+        - name: httpd
+          image: ivantipartners/polaris-httpd:117.0.0-611.production
+          ports:
+            - containerPort: 443
+            - containerPort: 80
+          securityContext:
+            capabilities:
+              add: ["SYS_ADMIN"]
+          volumeMounts:
+            - name: httpd-secret
+              mountPath: /etc/secrets
+              readOnly: true
+          env:
+            - name: PRIVATE_CLOUD_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: httpd-configmap
+                  key: cloud.name
+            # - name: PRIVATE_CLOUD_VHOSTS
+            #   valueFrom:
+            #     configMapKeyRef:
+            #       name: httpd-configmap
+            #       key: cloud.hosts
+            - name: PublicZone
+              valueFrom:
+                configMapKeyRef:
+                  name: httpd-configmap
+                  key: public.zone
+            - name: HostName
+              valueFrom:
+                configMapKeyRef:
+                  name: httpd-configmap
+                  key: hostname
+            - name: SERVICE_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: httpd-configmap
+                  key: service.host
+            - name: SERVICE_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: httpd-configmap
+                  key: service.port
+            - name: SERVICE_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: httpd-configmap
+                  key: service.name
+      imagePullSecrets:
+        - name: docker-hub-secret
+      volumes:
+        - name: httpd-secret
+          secret:
+            secretName: httpd-secret
+            items:
+              - key: domain.crt
+                path: domain.crt
+              - key: domain.key
+                path: domain.key
+              - key: cps.cer
+                path: cps.cer
+              - key: ssp.cer
+                path: ssp.cer

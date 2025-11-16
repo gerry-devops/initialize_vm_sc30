@@ -1,0 +1,14 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: amq-configmap
+data:
+  heap.size: "2000"
+  enable.ssl: "true"
+  hostname: "somewhere"
+  fedramp.cluster: "true" # if set false amq will try to download certs from AWS
+  db.host: "postgres.cluster.datasvcs"
+  db.port: "5432"
+  db.ssl.mode: "disable"
+  hydra.user.username: "hydra@mobileiron.com"

@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: httpd-configmap
+data:
+  public.zone: gamma.mobileiron.net
+  hostname: pc.gamma.mobileiron.net
+  service.host: polaris-service
+  service.port: "8080"
+  service.name: polaris-haproxy
+  cloud.name: "PC"
+  # cloud.hosts: |
+  #   alcor="sync.mdm.acme.net"
+  #   asf="apps.mdm.acme.net"
+  #   client="client.mdm.acme.net"
+  #   cps="cps-dt.mdm.acme.net"
+  #   kocab="connect.mdm.acme.net"
+  #   mdm="ios.mdm.acme.net"
+  #   miagent="bridge.mdm.acme.net"
+  #   wpmdm="wp.mdm.acme.net"

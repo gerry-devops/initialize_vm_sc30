@@ -1,0 +1,212 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: polaris-deployment
+  labels:
+    app: polaris
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: polaris
+  template:
+    metadata:
+      labels:
+        app: polaris
+    spec:
+      containers:
+        - name: polaris
+          image: ivantipartners/polaris:118.0.0-26.production
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              sysctl -w net.ipv4.tcp_keepalive_time=300
+              echo $SAML_CERT | base64 --decode > /mobileiron.com/data/polaris/saml/saml.cer
+              echo $SAML_KEY | base64 --decode > /mobileiron.com/data/polaris/saml/saml.key
+              openssl pkcs12 -export -in /mobileiron.com/data/polaris/saml/saml.cer \
+                -inkey /mobileiron.com/data/polaris/saml/saml.key -out /mobileiron.com/data/polaris/saml/samlKeystore.p12 \
+                -name mobileiron.com -passin pass:${KEYSTORE_PASSWORD} -passout pass:${KEYSTORE_PASSWORD}
+              /mobileiron.com/run.sh
+          ports:
+            - containerPort: 8080
+          securityContext:
+            privileged: true
+          readinessProbe:
+            failureThreshold: 1
+            httpGet:
+              path: /status
+              port: 8080
+            initialDelaySeconds: 200
+            periodSeconds: 60
+            successThreshold: 2
+            timeoutSeconds: 30
+          livenessProbe:
+            failureThreshold: 5
+            httpGet:
+              path: /status
+              port: 8080
+            initialDelaySeconds: 200
+            periodSeconds: 60
+            successThreshold: 1
+            timeoutSeconds: 30
+          env:
+            - name: CASSANDRA_ENABLED
+              valueFrom:
+                configMapKeyRef:
+                  name: polaris-configmap
+                  key: cassandra.enabled
+            - name: ES_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: polaris-configmap
+                  key: es.url
+            - name: ENCRYPTION_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: polaris-secret
+                  key: encryption.key
+            - name: JAVA_MEMORY_OPTS
+              valueFrom:
+                configMapKeyRef:
+                  name: polaris-configmap
+                  key: java_opts
+            - name: MIN_HEAP_SIZE
+              valueFrom:
+                configMapKeyRef:
+                  name: polaris-configmap
+                  key: min.heap
+            - name: MAX_HEAP_SIZE
+              valueFrom:
+                configMapKeyRef:
+                  name: polaris-configmap
+                  key: max.heap
+            - name: ENABLE_GC_LOGGING
+              valueFrom:
+                configMapKeyRef:
+                  name: polaris-configmap
+                  key: gc_logging
+            - name: KAFKA_HOSTS
+              valueFrom:
+                configMapKeyRef:
+                  name: polaris-configmap
+                  key: kafka.servers
+            - name: KEYSTORE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: polaris-secret
+                  key: saml.ks.password
+            - name: SAML_KEYSTORE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: polaris-secret
+                  key: saml.ks.password
+            - name: MEMCACHED_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: polaris-configmap
+                  key: memcached.dnsrecord
+            - name: POLARIS_DB_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: polaris-configmap
+                  key: polaris.db.url
+            - name: POLARIS_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: polaris-secret
+                  key: polaris.db.password
+            - name: REDIS_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: polaris-configmap
+                  key: redis.host
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: polaris-secret
+                  key: redis.auth_token
+            - name: RPT_DB_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: polaris-configmap
+                  key: rpt.jdbc.url
+            - name: RPT_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: polaris-secret
+                  key: rpt.jdbc.password
+            - name: KAFKA_SSL_ENABLED
+              valueFrom:
+                configMapKeyRef:
+                  name: polaris-configmap
+                  key: kafka.ssl.enabled
+            - name: LIBRARY_MODE
+              valueFrom:
+                configMapKeyRef:
+                  name: polaris-configmap
+                  key: redis.library.mode
+            - name: ACTIVEMQ_URI
+              valueFrom:
+                configMapKeyRef:
+                  name: polaris-configmap
+                  key: activemq.uri
+            - name: ACTIVEMQ_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: polaris-configmap
+                  key: activemq.port
+            - name: ACTIVEMQ_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: polaris-secret
+                  key: activemq.password
+            - name: JDBC_SSL_MODE
+              valueFrom:
+                configMapKeyRef:
+                  name: polaris-configmap
+                  key: jdbc.ssl.mode
+            - name: JMXSECRET
+              valueFrom:
+                secretKeyRef:
+                  name: polaris-secret
+                  key: jmx.secret
+            - name: SERVICE_ELASTICSEARCH_ENABLED
+              valueFrom:
+                configMapKeyRef:
+                  name: polaris-configmap
+                  key: service.elasticsearch.enabled
+            - name: SAML_CERT
+              valueFrom:
+                configMapKeyRef:
+                  name: polaris-configmap
+                  key: saml.crt
+            - name: SAML_KEY
+              valueFrom:
+                configMapKeyRef:
+                  name: polaris-configmap
+                  key: saml.key
+            - name: PC_CLUSTER
+              valueFrom:
+                configMapKeyRef:
+                  name: polaris-configmap
+                  key: pc.cluster
+            - name: FLEX_REPORT_JASPERSERVER_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: polaris-configmap
+                  key: flex.report.jasperserver.url
+          volumeMounts:
+            - name: nfs-share
+              mountPath: /mobileiron.com/data/polaris/cdn
+            - name: nfs-share-debug
+              mountPath: /mobileiron.com/data/polaris/debug
+      volumes:
+        - name: nfs-share
+          persistentVolumeClaim:
+            claimName: nfs-pvc
+        - name: nfs-share-debug
+          persistentVolumeClaim:
+            claimName: nfs-pvc-polaris-debug
+      imagePullSecrets:
+        - name: docker-hub-secret

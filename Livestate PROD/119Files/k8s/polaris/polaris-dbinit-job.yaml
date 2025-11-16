@@ -1,0 +1,70 @@
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: polaris-dbinit-job
+  labels:
+    app: polaris
+spec:
+  backoffLimit: 1
+  template:
+    spec:
+      serviceAccountName: privilegedsa
+      restartPolicy: OnFailure
+      containers:
+        - name: polaris-dbinit-job
+          image: ivantipartners/polaris:119.0.0-17.production
+          command:
+            - /mobileiron.com/run.sh
+          securityContext:
+            privileged: true
+          env:
+            - name: UPGRADE
+              value: "True"
+            - name: JDBC_SSL_MODE
+              valueFrom:
+                configMapKeyRef:
+                  name: polaris-configmap
+                  key: jdbc.ssl.mode
+            - name: ENCRYPTION_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: polaris-secret
+                  key: encryption.key
+            - name: JAVA_MEMORY_OPTS
+              valueFrom:
+                configMapKeyRef:
+                  name: polaris-configmap
+                  key: java_opts
+            - name: ENABLE_GC_LOGGING
+              valueFrom:
+                configMapKeyRef:
+                  name: polaris-configmap
+                  key: gc_logging
+            - name: POLARIS_DB_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: polaris-configmap
+                  key: polaris.db.url
+            - name: POLARIS_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: polaris-secret
+                  key: polaris.db.password
+            - name: RPT_DB_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: polaris-configmap
+                  key: rpt.jdbc.url
+            - name: RPT_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: polaris-secret
+                  key: rpt.jdbc.password
+            - name: KAFKA_SSL_ENABLED
+              valueFrom:
+                configMapKeyRef:
+                  name: polaris-configmap
+                  key: kafka.ssl.enabled
+      imagePullSecrets:
+        - name: docker-hub-secret

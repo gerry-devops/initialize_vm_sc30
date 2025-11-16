@@ -1,0 +1,57 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: reporting-configmap
+  labels:
+    app.kubernetes.io/name: reporting
+    app.kubernetes.io/instance: reporting-instance
+    app.kubernetes.io/managed-by: kubectl
+data:
+  jdbc_host: "postgres.cluster.datasvcs"
+  ssl_mode: "disable"
+  build_db_name: "postgres"
+  hostname: ${POLARIS_HOST}
+  secretMountPath: "/etc/secret-volume"
+  application-prod.properties: |
+    # Database Configuration
+    spring.datasource.reporting.url=jdbc:postgresql://postgres.cluster.datasvcs:5432/reporting?sslmode=${SSLMODE:disable}
+    spring.datasource.reporting.username=${DB_USERNAME}
+    spring.datasource.reporting.password=${DB_PASSWORD}
+
+    spring.datasource.polaris.url=jdbc:postgresql://postgres.cluster.datasvcs:5432/polaris?sslmode=${SSLMODE:disable}
+    spring.datasource.polaris.username=${POLARIS_DB_USERNAME}
+    spring.datasource.polaris.password=${POLARIS_DB_PASSWORD}
+
+    # Server Configuration
+    server.port=8080
+    server.tomcat.threads.max=200
+    server.tomcat.accept-count=100
+    server.tomcat.max-connections=1000
+    server.tomcat.connection-timeout=20000
+    server.tomcat.keep-alive-timeout=15000
+    server.tomcat.max-keep-alive-requests=100
+    server.tomcat.connection.max-lifetime=60000
+
+    server.report.uploadUrl=https://${POLARIS_HOST}/api/v1/report/flex/output
+    server.report.username=${reporting_uploader_polaris_user}
+    server.report.password=${reporting_uploader_polaris_pass}
+    server.report.connect-timeout=30000
+    server.report.read-timeout=300000
+
+    # Quartz Configuration
+    spring.quartz.properties.org.quartz.scheduler.instanceId=AUTO
+    spring.quartz.properties.org.quartz.scheduler.instanceName=ReportingClusteredScheduler-default
+    spring.quartz.properties.org.quartz.threadPool.threadCount=30
+    spring.quartz.properties.org.quartz.dataSource.reportingDS.URL=jdbc:postgresql://postgres.cluster.datasvcs:5432/reporting?sslmode=${SSLMODE:disable}
+    spring.quartz.properties.org.quartz.dataSource.reportingDS.user=${dbUsername}
+    spring.quartz.properties.org.quartz.dataSource.reportingDS.password=${dbPassword}
+    spring.quartz.properties.org.quartz.dataSource.reportingDS.maxConnections=20
+
+    # Admin Configuration
+    admin.username=admin
+    admin.password=${admin_password}
+
+    # Reporting & File System Configuration
+    reports.base.dir=/mobileiron.com/data/reports
+    processor.watchDirectory=/mobileiron.com/data/reports
+    processor.backupDirectory=/mobileiron.com/data/reports.bak

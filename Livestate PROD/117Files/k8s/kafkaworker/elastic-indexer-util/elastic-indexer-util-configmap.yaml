@@ -1,0 +1,26 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: elastic-indexer-util-configmap
+  namespace: kafkaworker
+data:
+  db.host: "postgres.cluster.datasvcs"
+  db.port: "5432"
+  db.name: "polaris"
+  db.username: "miadmin"
+  db.sslmode: "disable"
+  kafka.hosts: "kafka-0.cluster.datasvcs:9092,kafka-1.cluster.datasvcs:9092,kafka-2.cluster.datasvcs:9092"
+  kafka.ssl.enabled: "false"
+  zookeeper.hosts: "zookeeper-0.cluster.datasvcs:2181,zookeeper-1.cluster.datasvcs:2181,zookeeper-2.cluster.datasvcs:2181"
+  thread.pool.size: "4"
+  debezium.slot.name: "debezium"
+  es.url: "http://elasticsearch-0.cluster.datasvcs:9200"
+  es.replicas.number: "1"
+  es.shards.number: "4"
+  config.storage.topic: "my-connect-configs"
+  offset.storage.topic: "my-connect-offsets"
+  connect.status.topic: "connect-status"
+  script: "./init-mappings-k8s.sh"
+  prefix: "''"
+  device.custom.transformatin.enabled: "true"

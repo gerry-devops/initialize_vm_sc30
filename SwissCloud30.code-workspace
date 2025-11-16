@@ -17,6 +17,9 @@
 		},
 		{
 			"path": "install_docker"
+		},
+		{
+			"path": "Livestate PROD"
 		}
 	],
 	"settings": {}

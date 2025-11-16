@@ -1,0 +1,129 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: amq-deployment
+  labels:
+    app: amq
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: amq
+  template:
+    metadata:
+      labels:
+        app: amq
+    spec:
+      containers:
+        - name: amq
+          image: ivantipartners/activemq:117.0.0-217.production
+          ports:
+            - containerPort: 61616
+            - containerPort: 8883
+          env:
+            - name: DB_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: amq-secret
+                  key: db.name
+            - name: DB_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: amq-secret
+                  key: db.user
+            - name: DB_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: amq-configmap
+                  key: db.port
+            - name: DB_HOSTNAME
+              valueFrom:
+                configMapKeyRef:
+                  name: amq-configmap
+                  key: db.host
+            - name: DB_SSLMODE
+              valueFrom:
+                configMapKeyRef:
+                  name: amq-configmap
+                  key: db.ssl.mode
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: amq-secret
+                  key: db.password
+            - name: CLUSTER_FQDN
+              valueFrom:
+                configMapKeyRef:
+                  name: amq-configmap
+                  key: hostname
+            - name: FEDRAMP_CLUSTER
+              valueFrom:
+                configMapKeyRef:
+                  name: amq-configmap
+                  key: fedramp.cluster
+            - name: HEAP_SIZE
+              valueFrom:
+                configMapKeyRef:
+                  name: amq-configmap
+                  key: heap.size
+            - name: ENABLE_SSL
+              valueFrom:
+                configMapKeyRef:
+                  name: amq-configmap
+                  key: enable.ssl
+            - name: HYDRA_USER_USERNAME
+              valueFrom:
+                configMapKeyRef:
+                  name: amq-configmap
+                  key: hydra.user.username
+            - name: HYDRA_USER_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: amq-secret
+                  key: hydra.user.password
+            - name: CONSUMER_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: amq-secret
+                  key: consumer.password
+            - name: PRODUCER_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: amq-secret
+                  key: producer.password
+            - name: GUEST_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: amq-secret
+                  key: guest.password
+            - name: ENCRYPTION_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: amq-secret
+                  key: encryption.key
+            - name: ACTIVEMQ_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: amq-secret
+                  key: activemq.password
+            - name: KEYSTORE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: amq-secret
+                  key: keystore.password
+            - name: TRUSTSTORE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: amq-secret
+                  key: truststore.password
+
+          volumeMounts:
+                - name: nfs-share-secrets
+                  mountPath: /mobileiron.com/certs/
+      volumes:
+        - name: nfs-share-secrets
+          persistentVolumeClaim:
+            claimName: nfs-pvc-secrets
+      imagePullSecrets:
+        - name: docker-hub-secret

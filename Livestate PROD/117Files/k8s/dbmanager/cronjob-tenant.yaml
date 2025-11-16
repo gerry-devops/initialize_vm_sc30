@@ -1,0 +1,106 @@
+---
+apiVersion: batch/v1beta1
+kind: CronJob
+metadata:
+  name: tenant-integrity-check
+  namespace: dbmanager
+spec:
+  schedule: "0 1 * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+            - name: tenant-integrity-check
+              image: ivantipartners/dbmanager:117.0.0-149.production
+              command: ["/bin/sh", "-c"]
+              args:
+                - |
+                  bash /mobileiron.com/programs/cloudops/run_tenant_integrity_check.sh;
+                  cp /tmp/check_tenant_integrity*.log ${DBMANAGER_PATH}/tenant_report/;
+              env:
+                - name: CLOUDOPS_DIR
+                  valueFrom:
+                    configMapKeyRef:
+                      name: dbmanager-configmap
+                      key: cloudops.dir
+                - name: RPT_DIR
+                  valueFrom:
+                    configMapKeyRef:
+                      name: dbmanager-configmap
+                      key: rpt.dir
+                - name: POLARIS_REPLICA_DB_HOST
+                  valueFrom:
+                    configMapKeyRef:
+                      name: dbmanager-configmap
+                      key: db.host
+                - name: DB_PORT
+                  valueFrom:
+                    configMapKeyRef:
+                      name: dbmanager-configmap
+                      key: db.port
+                - name: DB_USER
+                  valueFrom:
+                    configMapKeyRef:
+                      name: dbmanager-configmap
+                      key: db.username
+                - name: DB_NAME
+                  valueFrom:
+                    configMapKeyRef:
+                      name: dbmanager-configmap
+                      key: db.name
+                - name: DB_SSLMODE
+                  valueFrom:
+                    configMapKeyRef:
+                      name: dbmanager-configmap
+                      key: db.sslmode
+                - name: RPT_HOST
+                  valueFrom:
+                    configMapKeyRef:
+                      name: dbmanager-configmap
+                      key: rpt.host
+                - name: RPT_PORT
+                  valueFrom:
+                    configMapKeyRef:
+                      name: dbmanager-configmap
+                      key: rpt.port
+                - name: RPT_LOGIN
+                  valueFrom:
+                    configMapKeyRef:
+                      name: dbmanager-configmap
+                      key: rpt.login
+                - name: RPT_NAME
+                  valueFrom:
+                    configMapKeyRef:
+                      name: dbmanager-configmap
+                      key: rpt.name
+                - name: RPT_SSLMODE
+                  valueFrom:
+                    configMapKeyRef:
+                      name: dbmanager-configmap
+                      key: rpt.sslmode
+                - name: DBMANAGER_PATH
+                  valueFrom:
+                    configMapKeyRef:
+                      name: dbmanager-configmap
+                      key: dbmanager.path
+                - name: POLARIS_REPLICA_DB_PASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: dbmanager-secret
+                      key: db.password
+                - name: RPT_PASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      name: dbmanager-secret
+                      key: rpt.password
+              volumeMounts:
+                - name: nfs-share-dbmanager
+                  mountPath: /mobileiron.com/data/dbmanager/
+          volumes:
+            - name: nfs-share-dbmanager
+              persistentVolumeClaim:
+                claimName: nfs-pvc-dbmanager
+          restartPolicy: OnFailure
+          imagePullSecrets:
+            - name: docker-hub-secret-dbmanager

@@ -1,0 +1,205 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: device-snapshot-worker
+  namespace: kafkaworker
+  labels:
+    app: device-snapshot
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: device-snapshot
+  template:
+    metadata:
+      name: device-snapshot
+      labels:
+        app: device-snapshot
+    spec:
+      containers:
+        - name: device-snapshot
+          image: ivantipartners/elastic-indexer:118.0.0-4.production
+          ports:
+            - containerPort: 3000
+          imagePullPolicy: Always
+          livenessProbe:
+            failureThreshold: 6
+            httpGet:
+              path: /actuator/health
+              port: 3000
+              scheme: HTTP
+            initialDelaySeconds: 60
+            periodSeconds: 30
+            successThreshold: 1
+            timeoutSeconds: 5
+          readinessProbe:
+            failureThreshold: 6
+            httpGet:
+              path: /actuator/health
+              port: 3000
+              scheme: HTTP
+            initialDelaySeconds: 60
+            periodSeconds: 30
+            successThreshold: 1
+            timeoutSeconds: 5
+          env:
+            - name: INDEXER_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: device-snapshot-configmap
+                  key: indexer.name
+            - name: KAFKA_WORKER_GROUPID
+              valueFrom:
+                configMapKeyRef:
+                  name: device-snapshot-configmap
+                  key: kafka.worker.groupid
+            - name: KAFKA_WORKER_TOPICS
+              valueFrom:
+                configMapKeyRef:
+                  name: device-snapshot-configmap
+                  key: kafka.worker.topics
+            - name: KAFKA_WORKER_FAILEDTOPIC
+              valueFrom:
+                configMapKeyRef:
+                  name: device-snapshot-configmap
+                  key: kafka.worker.failedtopic
+            - name: KAFKA_WORKER_RETRYFAILEDTOPIC
+              valueFrom:
+                configMapKeyRef:
+                  name: device-snapshot-configmap
+                  key: kafka.worker.retryfailedtopic
+            - name: KAFKA_WORKER_ALIASNAMES
+              valueFrom:
+                configMapKeyRef:
+                  name: device-snapshot-configmap
+                  key: kafka.worker.aliasnames
+            - name: KAFKA_WORKER_EXTRACTORTYPE
+              valueFrom:
+                configMapKeyRef:
+                  name: device-snapshot-configmap
+                  key: kafka.worker.extractortype
+            - name: KAFKA_WORKER_INDEXTYPE
+              valueFrom:
+                configMapKeyRef:
+                  name: device-snapshot-configmap
+                  key: kafka.worker.indextype
+            - name: KAFKA_WORKER_PREPROCESSORTYPE
+              valueFrom:
+                configMapKeyRef:
+                  name: device-snapshot-configmap
+                  key: kafka.worker.preprocessortype
+            - name: KAFKA_WORKER_TRANSFORMERTYPE
+              valueFrom:
+                configMapKeyRef:
+                  name: device-snapshot-configmap
+                  key: kafka.worker.transformertype
+            - name: KAFKA_SSL_ENABLED
+              valueFrom:
+                configMapKeyRef:
+                  name: device-snapshot-configmap
+                  key: kafka.ssl.enabled
+            - name: JAVA_OPTIONS
+              valueFrom:
+                configMapKeyRef:
+                  name: device-snapshot-configmap
+                  key: java.opts
+            - name: KAFKA_BOOTSTRAP_SERVERS
+              valueFrom:
+                configMapKeyRef:
+                  name: device-snapshot-configmap
+                  key: kafka.hosts
+            - name: SPRING_DATASOURCE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: device-snapshot-configmap
+                  key: db.url
+            - name: SPRING_DATASOURCE_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: device-snapshot-secret
+                  key: db.username
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: device-snapshot-secret
+                  key: db.password
+            - name: ELASTICSEARCH_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: device-snapshot-configmap
+                  key: es.url
+            - name: ZOOKEEPER_LIST
+              valueFrom:
+                configMapKeyRef:
+                  name: device-snapshot-configmap
+                  key: zookeeper.hosts
+            - name: prefix
+              valueFrom:
+                configMapKeyRef:
+                  name: device-snapshot-configmap
+                  key: prefix
+            - name: EsClusterNumberOfReplicas
+              valueFrom:
+                configMapKeyRef:
+                  name: device-snapshot-configmap
+                  key: es.replicas.number
+            - name: reindex_kafka_topic_name
+              valueFrom:
+                configMapKeyRef:
+                  name: device-snapshot-configmap
+                  key: reindex.kafka.topic.name
+            - name: reindex_es_index_name
+              valueFrom:
+                configMapKeyRef:
+                  name: device-snapshot-configmap
+                  key: reindex.es.index.name
+            - name: KAFKA_WORKER_FETCHMAXWAIT
+              valueFrom:
+                configMapKeyRef:
+                  name: device-snapshot-configmap
+                  key: kafka.worker.fetchmaxwait
+            - name: KAFKA_STREAMS_DEVICESNAPSHOT_DEDUPENABLED
+              valueFrom:
+                configMapKeyRef:
+                  name: device-snapshot-configmap
+                  key: kafka.streams.devicesnapshot.dedupenabled
+            - name: KAFKA_STREAMS_DEVICESNAPSHOT_SOURCETOPIC
+              valueFrom:
+                configMapKeyRef:
+                  name: device-snapshot-configmap
+                  key: kafka.streams.devicesnapshot.sourcetopic
+            - name: KAFKA_STREAMS_DEVICESNAPSHOT_DESTINATIONTOPIC
+              valueFrom:
+                configMapKeyRef:
+                  name: device-snapshot-configmap
+                  key: kafka.streams.devicesnapshot.destinationtopic
+            - name: KAFKA_STREAMS_DEVICESNAPSHOT_REPLICATION_FACTOR
+              valueFrom:
+                configMapKeyRef:
+                  name: device-snapshot-configmap
+                  key: kafka.streams.devicesnapshot.replication.factor
+            - name: KAFKA_STREAMS_DEVICESNAPSHOT_MIN_INSYNC_REPLICAS
+              valueFrom:
+                configMapKeyRef:
+                  name: device-snapshot-configmap
+                  key: kafka.streams.devicesnapshot.min.insync.replicas
+            - name: DEVICE_CUSTOM_TRANSFORMATION_ENABLED
+              valueFrom:
+                configMapKeyRef:
+                  name: device-snapshot-configmap
+                  key: device.custom.transformation.enabled
+            - name: ACCOUNT_CUSTOM_TRANSFORMATION_ENABLED
+              valueFrom:
+                configMapKeyRef:
+                  name: device-snapshot-configmap
+                  key: account.custom.transformation.enabled
+          volumeMounts:
+            - name: nfs-share-device-snapshot-worker
+              mountPath: /mobileiron.com/data/device-snapshot-worker/debug/
+      volumes:
+        - name: nfs-share-device-snapshot-worker
+          persistentVolumeClaim:
+            claimName: nfs-pvc-device-snapshot-worker
+      imagePullSecrets:
+        - name: docker-hub-secret-kafkaworker

@@ -1,0 +1,78 @@
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: amq-pre-setup
+spec:
+  backoffLimit: 0
+  template:
+    spec:
+      containers:
+        - name: pre-setup-job
+          image: ivantipartners/activemq:119.0.0-229.production
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              cat /certs/digicert-ca.pem > /mobileiron.com/certs/digicert-ca.pem;
+              cat /certs/mi-cert.pem > /mobileiron.com/certs/mi-cert.pem;
+              cat /certs/mi-key.pem > /mobileiron.com/certs/mi-key.pem;
+              bash initdb.sh -h ${DB_HOSTNAME} -U ${BUILD_DB_USER} -P ${BUILD_DB_PASSWD} -D ${BUILD_DB_NAME} -u ${DB_USER} -p ${DB_PASSWD} -d ${DB_NAME};
+          env:
+            - name: DB_HOSTNAME
+              valueFrom:
+                configMapKeyRef:
+                  name: amq-configmap
+                  key: db.host
+            - name: BUILD_DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: amq-secret
+                  key: build.db.user
+            - name: BUILD_DB_PASSWD
+              valueFrom:
+                secretKeyRef:
+                  name: amq-secret
+                  key: build.db.pw
+            - name: BUILD_DB_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: amq-secret
+                  key: build.db.name
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: amq-secret
+                  key: db.user
+            - name: DB_PASSWD
+              valueFrom:
+                secretKeyRef:
+                  name: amq-secret
+                  key: db.password
+            - name: DB_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: amq-secret
+                  key: db.name
+          imagePullPolicy: Always
+          volumeMounts:
+            - name: nfs-share-secrets
+              mountPath: /mobileiron.com/certs/
+            - name: amq-certs
+              mountPath: /certs/
+      volumes:
+        - name: nfs-share-secrets
+          persistentVolumeClaim:
+            claimName: nfs-pvc-secrets
+        - name: amq-certs
+          secret:
+            secretName: amq-secret
+            items:
+              - key: server-key.pem
+                path: mi-key.pem
+              - key: server-cert.pem
+                path: mi-cert.pem
+              - key: digicert-ca.pem
+                path: digicert-ca.pem
+      restartPolicy: Never
+      imagePullSecrets:
+        - name: docker-hub-secret

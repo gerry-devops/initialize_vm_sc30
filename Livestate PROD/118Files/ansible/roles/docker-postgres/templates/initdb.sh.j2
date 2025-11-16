@@ -1,0 +1,99 @@
+#!/bin/bash
+
+# Creates Polaris databases
+
+
+db_build_db=app
+db_build_user=app
+db_build_pw=Mi4man22
+
+user_flags="NOSUPERUSER INHERIT NOCREATEDB NOCREATEROLE NOREPLICATION"
+#TODO : DB flags are not working with postgres 10.7 check with dev team.
+db_flags=""
+#db_flags="ENCODING = 'UTF8' LC_COLLATE = 'en_US.UTF-8' LC_CTYPE = 'en_US.UTF-8' CONNECTION LIMIT = -1"
+
+which psql92 >/dev/null 2>&1
+if [ $? -eq 0 ]; then
+    psql_command=psql92
+else
+    psql_command=psql
+fi
+
+usage()
+{
+    echo "Usage: initdb.sh
+        -h|--db-host
+        -U|--build-db-user
+        -P|--build-db-pw
+        -D|--build-db-name
+        -u|--target-db-user
+        -p|--target-db-pw
+        -d|--target-db-name"
+}
+
+run_sql()
+{
+    echo $psql_command -h $1 -U $2 -c "$4" $3
+    cmd=$(($psql_command -h $1 -U $2 -c "$4" $3) 2>&1)
+    if [[ 0 -ne $? ]]; then
+        if [[ $cmd =~ .*already.* ]];then
+                echo "Already exists, ignoring operation..."
+        else
+                echo $cmd
+                exit 1;
+        fi
+    fi
+}
+
+#
+# MAIN
+#
+
+while [ "$#" -ge 1 ];
+do
+    case $1 in
+        -h|--db-host)
+            DB_HOST=${2%/}
+            shift
+            ;;
+        -U|--build-db-user)
+            BUILD_DB_USER=${2%/}
+            shift
+            ;;
+        -P|--build-db-pw)
+            BUILD_DB_PW=${2%/}
+            shift
+            ;;
+        -D|--build-db-name)
+            BUILD_DB_NAME=${2%/}
+            shift
+            ;;
+        -u|--target-db-user)
+            DB_USER=${2%/}
+            shift
+            ;;
+        -p|--target-db-pw)
+            DB_PW=${2%/}
+            shift
+            ;;
+        -d|--target-db-name)
+            DB_NAME=${2%/}
+            shift
+            ;;
+        *)
+            usage
+            exit 1
+    esac
+    shift
+done
+
+
+export PGPASSWORD=$BUILD_DB_PW;
+
+run_sql $DB_HOST $BUILD_DB_USER $BUILD_DB_NAME "CREATE ROLE ${DB_USER} LOGIN PASSWORD '${DB_PW}' $user_flags;"
+run_sql $DB_HOST $BUILD_DB_USER $BUILD_DB_NAME "CREATE DATABASE ${DB_NAME}  WITH OWNER = ${DB_USER} $db_flags;"
+run_sql $DB_HOST $BUILD_DB_USER $DB_NAME "CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\";"
+run_sql $DB_HOST $BUILD_DB_USER $DB_NAME "CREATE EXTENSION IF NOT EXISTS \"pgcrypto\";"
+run_sql $DB_HOST $BUILD_DB_USER $DB_NAME "CREATE EXTENSION IF NOT EXISTS \"pgstattuple\";"
+run_sql $DB_HOST $BUILD_DB_USER $DB_NAME "CREATE EXTENSION IF NOT EXISTS file_fdw;" $DB_NAME
+run_sql $DB_HOST $BUILD_DB_USER $DB_NAME "CREATE SERVER logserver FOREIGN DATA WRAPPER file_fdw;"

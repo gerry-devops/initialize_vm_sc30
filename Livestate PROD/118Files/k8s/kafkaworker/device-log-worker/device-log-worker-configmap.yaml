@@ -1,0 +1,30 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: device-log-worker-configmap
+  namespace: kafkaworker
+data:
+  indexer.name: "device-logs-worker"
+  kafka.worker.groupid: "device_logs_workers"
+  kafka.worker.topics: "device-log,device-log_reindex"
+  kafka.worker.failedtopic: "device-log_failed"
+  kafka.worker.retryfailedtopic: "device-log_retry_failed"
+  kafka.worker.aliasnames: "{'DEVICE_LOG':'device_logs'}"
+  kafka.worker.indextype: "DEVICE_LOG"
+  kafka.worker.transformertype: "elasticSearchDeviceLogTransformer"
+  kafka.worker.preprocessortype: "syncEventNoKeyProcessor"
+  kafka.worker.extractortype: "payloadExtractor"
+  kafka.worker.maxpollrecords: "6000"
+  kafka.ssl.enabled: "false"
+  kafka.hosts: "kafka-0.cluster.datasvcs:9092,kafka-1.cluster.datasvcs:9092,kafka-2.cluster.datasvcs:9092"
+  java.opts: "-Xmx1024m -Xms512m"
+  db.url: "jdbc:postgresql://postgres.cluster.datasvcs:5432/polaris?sslmode=disable"
+  es.url: "http://elasticsearch-0.cluster.datasvcs:9200"
+  es.replicas.number: "1"
+  prefix: "''"
+  reindex.kafka.topic.name: "<reindex_kafka_topic_name>"
+  reindex.es.index.name: "<reindex_es_index_name>"
+  customattributetransformation.deviceindex.enabled: "false"
+  device.custom.transformation.enabled: "false"
+  account.custom.transformation.enabled: "false"

@@ -1,0 +1,180 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: universal-worker-deployment
+  namespace: kafkaworker
+  labels:
+    app: universal-worker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: universal-worker
+  template:
+    metadata:
+      name: universal-worker
+      labels:
+        app: universal-worker
+    spec:
+      containers:
+        - name: universal-worker
+          image: ivantipartners/elastic-indexer:118.0.0-4.production
+          ports:
+            - containerPort: 3000
+          imagePullPolicy: Always
+          livenessProbe:
+            failureThreshold: 6
+            httpGet:
+              path: /actuator/health
+              port: 3000
+              scheme: HTTP
+            initialDelaySeconds: 60
+            periodSeconds: 30
+            successThreshold: 1
+            timeoutSeconds: 5
+          readinessProbe:
+            failureThreshold: 6
+            httpGet:
+              path: /actuator/health
+              port: 3000
+              scheme: HTTP
+            initialDelaySeconds: 60
+            periodSeconds: 30
+            successThreshold: 1
+            timeoutSeconds: 5
+          env:
+            - name: INDEXER_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: universal-worker-configmap
+                  key: indexer.name
+            - name: KAFKA_WORKER_GROUPID
+              valueFrom:
+                configMapKeyRef:
+                  name: universal-worker-configmap
+                  key: kafka.worker.groupid
+            - name: KAFKA_WORKER_TOPICS
+              valueFrom:
+                configMapKeyRef:
+                  name: universal-worker-configmap
+                  key: kafka.worker.topics
+            - name: KAFKA_WORKER_FAILEDTOPIC
+              valueFrom:
+                configMapKeyRef:
+                  name: universal-worker-configmap
+                  key: kafka.worker.failedtopic
+            - name: KAFKA_WORKER_RETRYFAILEDTOPIC
+              valueFrom:
+                configMapKeyRef:
+                  name: universal-worker-configmap
+                  key: kafka.worker.retryfailedtopic
+            - name: KAFKA_WORKER_INDEXTYPES
+              valueFrom:
+                configMapKeyRef:
+                  name: universal-worker-configmap
+                  key: kafka.worker.indextypes
+            - name: KAFKA_WORKER_ALIASNAMES
+              valueFrom:
+                configMapKeyRef:
+                  name: universal-worker-configmap
+                  key: kafka.worker.aliasnames
+            - name: KAFKA_WORKER_EXTRACTORTYPE
+              valueFrom:
+                configMapKeyRef:
+                  name: universal-worker-configmap
+                  key: kafka.worker.extractortype
+            - name: KAFKA_WORKER_PREPROCESSORTYPE
+              valueFrom:
+                configMapKeyRef:
+                  name: universal-worker-configmap
+                  key: kafka.worker.preprocessortype
+            - name: KAFKA_WORKER_TRANSFORMERTYPE
+              valueFrom:
+                configMapKeyRef:
+                  name: universal-worker-configmap
+                  key: kafka.worker.transformertype
+            - name: KAFKA_WORKER_INDEXTYPE
+              valueFrom:
+                configMapKeyRef:
+                  name: universal-worker-configmap
+                  key: kafka.worker.indextype
+            - name: KAFKA_WORKER_FETCHMAXWAIT
+              valueFrom:
+                configMapKeyRef:
+                  name: universal-worker-configmap
+                  key: kafka.worker.fetchmaxwait
+            - name: KAFKA_SSL_ENABLED
+              valueFrom:
+                configMapKeyRef:
+                  name: universal-worker-configmap
+                  key: kafka.ssl.enabled
+            - name: JAVA_OPTIONS
+              valueFrom:
+                configMapKeyRef:
+                  name: universal-worker-configmap
+                  key: java.opts
+            - name: KAFKA_BOOTSTRAP_SERVERS
+              valueFrom:
+                configMapKeyRef:
+                  name: universal-worker-configmap
+                  key: kafka.hosts
+            - name: SPRING_DATASOURCE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: universal-worker-configmap
+                  key: db.url
+            - name: SPRING_DATASOURCE_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: universal-worker-secret
+                  key: db.username
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: universal-worker-secret
+                  key: db.password
+            - name: ELASTICSEARCH_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: universal-worker-configmap
+                  key: es.url
+            - name: prefix
+              valueFrom:
+                configMapKeyRef:
+                  name: universal-worker-configmap
+                  key: prefix
+            - name: EsClusterNumberOfReplicas
+              valueFrom:
+                configMapKeyRef:
+                  name: universal-worker-configmap
+                  key: es.replicas.number
+            - name: reindex_kafka_topic_name
+              valueFrom:
+                configMapKeyRef:
+                  name: universal-worker-configmap
+                  key: reindex.kafka.topic.name
+            - name: reindex_es_index_name
+              valueFrom:
+                configMapKeyRef:
+                  name: universal-worker-configmap
+                  key: reindex.es.index.name
+            - name: DEVICE_CUSTOM_TRANSFORMATION_ENABLED
+              valueFrom:
+                configMapKeyRef:
+                  name: universal-worker-configmap
+                  key: device.custom.transformation.enabled
+            - name: ACCOUNT_CUSTOM_TRANSFORMATION_ENABLED
+              valueFrom:
+                configMapKeyRef:
+                  name: universal-worker-configmap
+                  key: account.custom.transformation.enabled
+          volumeMounts:
+            - name: nfs-share-universal-worker
+              mountPath: /mobileiron.com/data/universal-worker/debug/
+      volumes:
+        - name: nfs-share-universal-worker
+          persistentVolumeClaim:
+            claimName: nfs-pvc-universal-worker
+      imagePullSecrets:
+        - name: docker-hub-secret-kafkaworker

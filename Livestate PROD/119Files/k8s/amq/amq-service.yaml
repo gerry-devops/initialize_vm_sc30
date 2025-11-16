@@ -1,0 +1,26 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: amq-service
+spec:
+  selector:
+    app: amq
+  ports:
+    - protocol: TCP
+      port: 61616
+      targetPort: 61616
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: amq-ext-service
+spec:
+  selector:
+    app: amq
+  ports:
+    - protocol: TCP
+      port: 8883
+      targetPort: 8883
+      nodePort: 30883
+  type: NodePort

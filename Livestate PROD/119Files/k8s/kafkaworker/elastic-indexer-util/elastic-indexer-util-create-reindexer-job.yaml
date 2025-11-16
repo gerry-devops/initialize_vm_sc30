@@ -1,0 +1,132 @@
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: elastic-indexer-util-create-reindexer-job
+  namespace: kafkaworker
+spec:
+  backoffLimit: 0
+  template:
+    metadata:
+      name: elastic-indexer-util-create-reindexer-job
+      labels:
+        app: elastic-indexer-util-create-reindexer-job
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: elastic-indexer-util-create-reindexer
+          image: ivantipartners/elastic-indexer-util:119.0.0-4.production
+          command:
+            - /bin/bash
+          args:
+            - -c
+            - /mobileiron.com/programs/elasticsearch/upgrade-mapping.sh INSTALL
+          imagePullPolicy: Always
+          env:
+            - name: DB_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: elastic-indexer-util-configmap
+                  key: db.host
+            - name: DB_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: elastic-indexer-util-configmap
+                  key: db.port
+            - name: DB_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: elastic-indexer-util-configmap
+                  key: db.name
+            - name: DB_USER
+              valueFrom:
+                secretKeyRef:
+                  name: elastic-indexer-util-secret
+                  key: db.username
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: elastic-indexer-util-secret
+                  key: db.password
+            - name: PGSSLMODE
+              valueFrom:
+                configMapKeyRef:
+                  name: elastic-indexer-util-configmap
+                  key: db.sslmode
+            - name: KAFKA_BROKERS_LIST
+              valueFrom:
+                configMapKeyRef:
+                  name: elastic-indexer-util-configmap
+                  key: kafka.hosts
+            - name: KAFKA_CONNECT_CONFIGS_TOPIC
+              valueFrom:
+                configMapKeyRef:
+                  name: elastic-indexer-util-configmap
+                  key: config.storage.topic
+            - name: KAFKA_CONNECT_OFFSETS_TOPIC
+              valueFrom:
+                configMapKeyRef:
+                  name: elastic-indexer-util-configmap
+                  key: offset.storage.topic
+            - name: KAFKA_CONNECT_STATUS_TOPIC
+              valueFrom:
+                configMapKeyRef:
+                  name: elastic-indexer-util-configmap
+                  key: connect.status.topic
+            - name: KAFKA_SSL_ENABLED
+              valueFrom:
+                configMapKeyRef:
+                  name: elastic-indexer-util-configmap
+                  key: kafka.ssl.enabled
+            - name: ZOOKEEPER_LIST
+              valueFrom:
+                configMapKeyRef:
+                  name: elastic-indexer-util-configmap
+                  key: zookeeper.hosts
+            - name: THREAD_POOL_SIZE
+              valueFrom:
+                configMapKeyRef:
+                  name: elastic-indexer-util-configmap
+                  key: thread.pool.size
+            - name: DEBEZIUM_SLOT_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: elastic-indexer-util-configmap
+                  key: debezium.slot.name
+            - name: ES_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: elastic-indexer-util-configmap
+                  key: es.url
+            - name: ES_CLUSTER_NUMBER_OF_REPLICAS
+              valueFrom:
+                configMapKeyRef:
+                  name: elastic-indexer-util-configmap
+                  key: es.replicas.number
+            - name: ES_CLUSTER_NUMBER_OF_SHARDS
+              valueFrom:
+                configMapKeyRef:
+                  name: elastic-indexer-util-configmap
+                  key: es.shards.number
+            - name: SCRIPT
+              valueFrom:
+                configMapKeyRef:
+                  name: elastic-indexer-util-configmap
+                  key: script
+            - name: prefix
+              valueFrom:
+                configMapKeyRef:
+                  name: elastic-indexer-util-configmap
+                  key: prefix
+            - name: DEVICE_CUSTOM_TRANSFORMATION_ENABLED
+              valueFrom:
+                configMapKeyRef:
+                  name: elastic-indexer-util-configmap
+                  key: device.custom.transformation.enabled
+            - name: ACCOUNT_CUSTOM_TRANSFORMATION_ENABLED
+              valueFrom:
+                configMapKeyRef:
+                  name: elastic-indexer-util-configmap
+                  key: account.custom.transformation.enabled
+      imagePullSecrets:
+        - name: docker-hub-secret-kafkaworker

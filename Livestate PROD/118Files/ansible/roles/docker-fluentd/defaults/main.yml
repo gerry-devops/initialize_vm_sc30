@@ -1,0 +1,5 @@
+---
+fluentd_image: ivantipartners/fluentd
+fluentd_tag: fluentd-with-es-plugin.production
+fluentd_container_name: fluentd
+fluentd_port: 24224

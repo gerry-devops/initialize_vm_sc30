@@ -1,0 +1,160 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: device-worker-deployment
+  namespace: kafkaworker
+  labels:
+    app: device-worker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: device-worker
+  template:
+    metadata:
+      name: device-worker
+      labels:
+        app: device-worker
+    spec:
+      containers:
+        - name: device-worker
+          image: ivantipartners/elastic-indexer:118.0.0-4.production
+          ports:
+            - containerPort: 3000
+          imagePullPolicy: Always
+          livenessProbe:
+            failureThreshold: 6
+            httpGet:
+              path: /actuator/health
+              port: 3000
+              scheme: HTTP
+            initialDelaySeconds: 60
+            periodSeconds: 30
+            successThreshold: 1
+            timeoutSeconds: 5
+          readinessProbe:
+            failureThreshold: 6
+            httpGet:
+              path: /actuator/health
+              port: 3000
+              scheme: HTTP
+            initialDelaySeconds: 60
+            periodSeconds: 30
+            successThreshold: 1
+            timeoutSeconds: 5
+          env:
+            - name: INDEXER_NAME
+              valueFrom:
+                configMapKeyRef:
+                  name: device-worker-configmap
+                  key: indexer.name
+            - name: KAFKA_WORKER_GROUPID
+              valueFrom:
+                configMapKeyRef:
+                  name: device-worker-configmap
+                  key: kafka.worker.groupid
+            - name: KAFKA_WORKER_TOPICS
+              valueFrom:
+                configMapKeyRef:
+                  name: device-worker-configmap
+                  key: kafka.worker.topics
+            - name: KAFKA_WORKER_FAILEDTOPIC
+              valueFrom:
+                configMapKeyRef:
+                  name: device-worker-configmap
+                  key: kafka.worker.failedtopic
+            - name: KAFKA_WORKER_RETRYFAILEDTOPIC
+              valueFrom:
+                configMapKeyRef:
+                  name: device-worker-configmap
+                  key: kafka.worker.retryfailedtopic
+            - name: KAFKA_WORKER_ALIASNAMES
+              valueFrom:
+                configMapKeyRef:
+                  name: device-worker-configmap
+                  key: kafka.worker.aliasnames
+            - name: KAFKA_SSL_ENABLED
+              valueFrom:
+                configMapKeyRef:
+                  name: device-worker-configmap
+                  key: kafka.ssl.enabled
+            - name: JAVA_OPTIONS
+              valueFrom:
+                configMapKeyRef:
+                  name: device-worker-configmap
+                  key: java.opts
+            - name: KAFKA_BOOTSTRAP_SERVERS
+              valueFrom:
+                configMapKeyRef:
+                  name: device-worker-configmap
+                  key: kafka.hosts
+            - name: SPRING_DATASOURCE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: device-worker-configmap
+                  key: db.url
+            - name: SPRING_DATASOURCE_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: device-worker-secret
+                  key: db.username
+            - name: SPRING_DATASOURCE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: device-worker-secret
+                  key: db.password
+            - name: ELASTICSEARCH_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: device-worker-configmap
+                  key: es.url
+            - name: KAFKA_WORKER_MESSAGETOINDEXTYPES
+              valueFrom:
+                configMapKeyRef:
+                  name: device-worker-configmap
+                  key: kafka.worker.messagetoindextypes
+            - name: ZOOKEEPER_LIST
+              valueFrom:
+                configMapKeyRef:
+                  name: device-worker-configmap
+                  key: zookeeper.hosts
+            - name: prefix
+              valueFrom:
+                configMapKeyRef:
+                  name: device-worker-configmap
+                  key: prefix
+            - name: EsClusterNumberOfReplicas
+              valueFrom:
+                configMapKeyRef:
+                  name: device-worker-configmap
+                  key: es.replicas.number
+            - name: reindex_kafka_topic_name
+              valueFrom:
+                configMapKeyRef:
+                  name: device-worker-configmap
+                  key: reindex.kafka.topic.name
+            - name: reindex_es_index_name
+              valueFrom:
+                configMapKeyRef:
+                  name: device-worker-configmap
+                  key: reindex.es.index.name
+            - name: DEVICE_CUSTOM_TRANSFORMATION_ENABLED
+              valueFrom:
+                configMapKeyRef:
+                  name: device-worker-configmap
+                  key: device.custom.transformation.enabled
+            - name: ACCOUNT_CUSTOM_TRANSFORMATION_ENABLED
+              valueFrom:
+                configMapKeyRef:
+                  name: device-worker-configmap
+                  key: account.custom.transformation.enabled
+          volumeMounts:
+            - name: nfs-share-device-worker
+              mountPath: /mobileiron.com/data/device-worker/debug/
+      volumes:
+        - name: nfs-share-device-worker
+          persistentVolumeClaim:
+            claimName: nfs-pvc-device-worker
+      imagePullSecrets:
+        - name: docker-hub-secret-kafkaworker
