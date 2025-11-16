@@ -1,0 +1,72 @@
+---
+# Datei: update_rhel9_rolling.yml
+
+- name: RHEL9 – Rolling System-Updates mit optionalem Docker-Check
+  hosts: all
+  become: yes
+  serial: 1          # immer nur ein Host gleichzeitig
+  any_errors_fatal: true
+
+  vars:
+    docker_service_unit: docker.service   # Systemd-Unit-Name
+
+  tasks:
+    - name: Service-Informationen sammeln (für Docker-Check)
+      ansible.builtin.service_facts:
+
+    - name: Prüfe, ob Docker installiert ist
+      ansible.builtin.set_fact:
+        docker_installed: "{{ docker_service_unit in ansible_facts.services }}"
+
+    - name: Info, ob Docker auf diesem Host vorhanden ist
+      ansible.builtin.debug:
+        msg: >-
+          Docker ist auf {{ inventory_hostname }}
+          {{ 'installiert – Docker-Check nach Reboot wird durchgeführt.' 
+             if docker_installed else 
+             'nicht installiert – Docker-Check wird übersprungen.' }}
+
+    - name: Prüfe, ob Updates verfügbar sind (dnf check-update)
+      ansible.builtin.command: dnf -q check-update
+      register: dnf_check
+      changed_when: dnf_check.rc == 100
+      failed_when: dnf_check.rc not in [0, 100]
+
+    - name: Zeige Info, wenn Updates verfügbar sind
+      ansible.builtin.debug:
+        msg: "{{ inventory_hostname }} hat Paket-Updates verfügbar."
+      when: dnf_check.rc == 100
+
+    - name: Aktualisiere alle Pakete, für die Updates vorhanden sind
+      ansible.builtin.dnf:
+        name: "*"
+        state: latest
+      register: dnf_update
+      when: dnf_check.rc == 100
+
+    - name: Reboote System, falls Pakete aktualisiert wurden
+      ansible.builtin.reboot:
+        msg: "Reboot nach Paket-Update durch Ansible"
+        connect_timeout: 30
+        reboot_timeout: 1800
+        pre_reboot_delay: 5
+        post_reboot_delay: 30
+        test_command: "whoami"
+      when: dnf_update is defined and dnf_update is changed
+
+    # Ab hier: Host ist wieder erreichbar.
+    # Nur wenn Docker installiert ist, prüfen wir jetzt, ob es läuft.
+
+    - name: Stelle sicher, dass Docker gestartet und aktiviert ist (nur wenn installiert)
+      ansible.builtin.service:
+        name: "{{ docker_service_unit }}"
+        state: started
+        enabled: yes
+      when: docker_installed | default(false)
+
+    - name: Warte, bis der Docker-Socket verfügbar ist (nur wenn Docker installiert ist)
+      ansible.builtin.wait_for:
+        path: /var/run/docker.sock
+        state: present
+        timeout: 300
+      when: docker_installed | default(false)

@@ -1,0 +1,49 @@
+---
+- name: Firewall und SELinux permanent deaktivieren (RHEL9, sequenzieller Reboot)
+  hosts: rhel9          # deine Gruppe aus dem Inventory
+  become: true
+  gather_facts: yes
+  serial: 1             # <<< WICHTIG: nur ein Host gleichzeitig
+
+  tasks:
+    # ---------------------------------------------
+    # FIREWALLD
+    # ---------------------------------------------
+    - name: Prüfe, ob firewalld installiert ist
+      ansible.builtin.service_facts:
+
+    - name: firewalld stoppen und deaktivieren (falls vorhanden)
+      ansible.builtin.service:
+        name: firewalld
+        state: stopped
+        enabled: false
+      when: "'firewalld.service' in ansible_facts.services"
+
+    # ---------------------------------------------
+    # SELINUX
+    # ---------------------------------------------
+    - name: Aktuellen SELinux Status anzeigen
+      ansible.builtin.command: getenforce
+      register: selinux_status
+      changed_when: false
+
+    - name: SELinux dauerhaft deaktivieren (/etc/selinux/config)
+      ansible.builtin.replace:
+        path: /etc/selinux/config
+        regexp: '^SELINUX=.*'
+        replace: 'SELINUX=disabled'
+      register: selinux_config_change
+
+    - name: SELinux im laufenden Betrieb auf permissive setzen
+      ansible.builtin.command: setenforce 0
+      when: selinux_status.stdout != "Disabled"
+      ignore_errors: true
+
+    # ---------------------------------------------
+    # REBOOT nur wenn nötig – Host für Host
+    # ---------------------------------------------
+    - name: Reboot durchführen, wenn SELinux-Config geändert wurde
+      ansible.builtin.reboot:
+        msg: "Reboot wegen SELinux-Deaktivierung"
+        reboot_timeout: 600
+      when: selinux_config_change is changed
