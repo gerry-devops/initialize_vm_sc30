@@ -17,6 +17,7 @@ spec:
       labels:
         app: device-worker
     spec:
+      serviceAccountName: privilegedsa
       containers:
         - name: device-worker
           image: ivantipartners/elastic-indexer:117.0.0-2.production

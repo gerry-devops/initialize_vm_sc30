@@ -12,6 +12,7 @@ spec:
       labels:
         app: elastic-indexer-util-create-reindexer-job
     spec:
+      serviceAccountName: privilegedsa
       restartPolicy: Never
       containers:
         - name: elastic-indexer-util-create-reindexer

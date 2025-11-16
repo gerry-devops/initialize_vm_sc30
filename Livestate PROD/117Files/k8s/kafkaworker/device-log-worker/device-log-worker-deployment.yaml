@@ -17,6 +17,7 @@ spec:
       labels:
         app: device-log-worker
     spec:
+      serviceAccountName: privilegedsa
       containers:
         - name: device-log-worker
           image: ivantipartners/elastic-indexer:117.0.0-2.production

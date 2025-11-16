@@ -17,6 +17,7 @@ spec:
       labels:
         app: device-snapshot
     spec:
+      serviceAccountName: privilegedsa
       containers:
         - name: device-snapshot
           image: ivantipartners/elastic-indexer:117.0.0-2.production

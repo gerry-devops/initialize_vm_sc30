@@ -15,6 +15,7 @@ spec:
       labels:
         app: debezium
     spec:
+      serviceAccountName: privilegedsa
       containers:
         - name: debezium
           image: ivantipartners/debezium:117.0.0-2.production

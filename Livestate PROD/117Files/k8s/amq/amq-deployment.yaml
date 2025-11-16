@@ -15,9 +15,12 @@ spec:
       labels:
         app: amq
     spec:
+      serviceAccountName: privilegedsa
       containers:
         - name: amq
           image: ivantipartners/activemq:117.0.0-217.production
+          securityContext:
+            privileged: true
           ports:
             - containerPort: 61616
             - containerPort: 8883

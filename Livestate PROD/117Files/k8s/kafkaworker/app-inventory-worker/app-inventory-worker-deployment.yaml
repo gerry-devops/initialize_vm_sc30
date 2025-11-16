@@ -17,6 +17,7 @@ spec:
       labels:
         app: app-inventory-worker
     spec:
+      serviceAccountName: privilegedsa
       containers:
         - name: app-inventory-worker
           image: ivantipartners/elastic-indexer:117.0.0-2.production
